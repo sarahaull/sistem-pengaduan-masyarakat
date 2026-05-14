@@ -38,48 +38,41 @@ export const login = async (req, res) => {
     const user = await User.findByEmail(email);
 
     if (!user) {
-      return res.status(404).json({
-        msg: "User tidak ditemukan",
-      });
+      return res.status(404).json({ msg: "User tidak ditemukan" });
     }
 
-    const match = await bcrypt.compare(
-      password,
-      user.password
-    );
+    const match = await bcrypt.compare(password, user.password);
 
     if (!match) {
-      return res.status(400).json({
-        msg: "Password salah",
-      });
+      return res.status(400).json({ msg: "Password salah" });
     }
+
+    const role = (user.role || "").toLowerCase();
 
     const token = jwt.sign(
       {
         id: user.id,
-        role: user.role,
+        role,
       },
       process.env.JWT_SECRET,
-      {
-        expiresIn: "1d",
-      }
+      { expiresIn: "1d" }
     );
 
-    res.status(200).json({
+    // ✅ HANYA 1 RESPONSE (INI FIX PENTING)
+    return res.status(200).json({
       msg: "Login berhasil",
       token,
       user: {
         id: user.id,
         nama: user.nama,
         email: user.email,
-        role: user.role,
+        role,
       },
     });
+
   } catch (err) {
     console.log(err);
-    res.status(500).json({
-      msg: err.message,
-    });
+    return res.status(500).json({ msg: err.message });
   }
 };
 
@@ -123,5 +116,20 @@ export const updateProfile = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ msg: err.message });
+  }
+};
+
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.findAll(); // atau query kamu
+
+    return res.json({
+      success: true,
+      data: users,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Gagal ambil users",
+    });
   }
 };

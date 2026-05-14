@@ -1,10 +1,9 @@
-// import express from "express";
-// import { auth } from "../middleware/auth.js";
-// import { getProfile } from "../controllers/userController.js";
+import express from "express";
 
-// const router = express.Router();
+const router = express.Router();
 
-// // GET PROFILE USER
-// router.get("/profile", auth, getProfile);
+router.get("/", (req, res) => {
+  res.json({ message: "User route OK" });
+});
 
-// export default router;
+export default router;

@@ -3,8 +3,7 @@ import auth from "../middleware/auth.js";
 import role from "../middleware/role.js";
 import upload from "../middleware/upload.js";
 
-
-// ================= CONTROLLERS =================
+// controllers
 import {
   createLaporan,
   getAllLaporan,
@@ -29,72 +28,36 @@ import {
 } from "../controllers/adminController.js";
 
 import {
+  getSuperAdminDashboard,
+  getAllUsers,
+  createAdmin,
+  deleteUser,
+  getAllLaporanSuperAdmin,
+} from "../controllers/superAdminController.js";
+
+import {
   register,
   login,
   getProfile,
-  updateProfile ,
+  updateProfile,
 } from "../controllers/userController.js";
 
 const router = express.Router();
 
+/* ================= AUTH ================= */
+router.post("/register", register);
+router.post("/login", login);
 
-// ======================================================
-// AUTH
-// ======================================================
-
-// REGISTER
-router.post(
-  "/register",
-  register
-);
-
-// LOGIN
-router.post(
-  "/login",
-  login
-);
-
-// PROFILE
-router.get(
-  "/profile",
-  auth,
-  getProfile
-);
+/* ================= PROFILE ================= */
+router.get("/profile", auth, getProfile);
 router.put("/profile", auth, updateProfile);
 
+/* ================= LAPORAN USER ================= */
+router.get("/laporan", auth, getAllLaporan);
+router.post("/laporan", auth, upload.single("foto"), createLaporan);
+router.get("/laporan/:id", auth, getLaporanById);
 
-// ======================================================
-// USER LAPORAN
-// ======================================================
-
-// GET ALL LAPORAN USER
-router.get(
-  "/laporan",
-  auth,
-  getAllLaporan
-);
-
-// CREATE LAPORAN
-router.post(
-  "/laporan",
-  auth,
-  upload.single("foto"),
-  createLaporan
-);
-
-// DETAIL LAPORAN
-router.get(
-  "/laporan/:id",
-  auth,
-  getLaporanById
-);
-
-
-// ======================================================
-// ADMIN
-// ======================================================
-
-// GET ALL LAPORAN ADMIN
+/* ================= ADMIN + SUPER ADMIN LAPORAN ================= */
 router.get(
   "/admin/laporan",
   auth,
@@ -102,7 +65,6 @@ router.get(
   getAllLaporanAdmin
 );
 
-// UPDATE STATUS LAPORAN
 router.put(
   "/admin/laporan/:id/status",
   auth,
@@ -110,7 +72,6 @@ router.put(
   updateStatusLaporan
 );
 
-// DELETE LAPORAN
 router.delete(
   "/admin/laporan/:id",
   auth,
@@ -118,51 +79,58 @@ router.delete(
   deleteLaporan
 );
 
+/* ================= CATEGORY ================= */
+router.get("/categories", auth, getCategories);
 
-// ======================================================
-// CATEGORY
-// ======================================================
+/* ================= COMMENT ================= */
+router.post("/comments", auth, addComment);
+router.delete("/comments/:id", auth, deleteComment);
 
-router.get(
-  "/categories",
-  auth,
-  getCategories
-);
-
-
-// ======================================================
-// COMMENT
-// ======================================================
-
-// ADD COMMENT
-router.post(
-  "/comments",
-  auth,
-  addComment
-);
-
-// DELETE COMMENT
-router.delete(
-  "/comments/:id",
-  auth,
-  deleteComment
-);
-
-
-// ======================================================
-// ADMIN DASHBOARD
-// ======================================================
-
+/* ================= ADMIN DASHBOARD ================= */
 router.get(
   "/admin/dashboard",
   auth,
-  role("admin", "super_admin"),
+  role("admin", "super_admin"), // 🔥 FIX PENTING
   getDashboardAdmin
 );
 
+/* ================= SUPER ADMIN ================= */
+router.get(
+  "/super-admin/dashboard",
+  auth,
+  role("super_admin"),
+  getSuperAdminDashboard
+);
 
-// ================= ADMIN PROFILE =================
+router.get(
+  "/super-admin/users",
+  auth,
+  role("super_admin"),
+  getAllUsers
+);
 
+router.post(
+  "/super-admin/create-admin",
+  auth,
+  role("super_admin"),
+  createAdmin
+);
+
+router.delete(
+  "/super-admin/user/:id",
+  auth,
+  role("super_admin"),
+  deleteUser
+);
+
+router.get(
+  "/super-admin/laporan",
+  auth,
+  role("super_admin"),
+  getAllLaporanSuperAdmin
+);
+
+/* ================= ADMIN PROFILE ================= */
 router.get(
   "/admin/profile",
   auth,

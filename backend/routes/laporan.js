@@ -24,4 +24,37 @@ router.get("/laporan/:id", auth, getLaporanById);
 // UPDATE STATUS (FIX 2)
 router.put("/laporan/:id/status", auth, updateStatusLaporan);
 
+let laporan = [
+  {
+    id: 1,
+    judul: "Lampu jalan mati",
+    status: "pending",
+    isRead: false,
+  },
+  {
+    id: 2,
+    judul: "Jalan rusak",
+    status: "pending",
+    isRead: false,
+  },
+];
+
+export async function GET() {
+  return Response.json(laporan);
+}
+
+export async function POST(req) {
+  const body = await req.json();
+
+  const newLaporan = {
+    id: Date.now(),
+    ...body,
+    isRead: false,
+  };
+
+  laporan.push(newLaporan);
+
+  return Response.json(newLaporan);
+}
+
 export default router;

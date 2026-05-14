@@ -13,6 +13,8 @@ import {
   FaArrowRight,
   FaHome,
   FaChartLine,
+  FaEdit,
+  FaTrash,
 } from "react-icons/fa";
 
 export default function DashboardPage() {
@@ -23,6 +25,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [deletingId, setDeletingId] = useState(null); // untuk animasi loading saat hapus
 
   // Fetch laporan
   const fetchLaporan = async () => {
@@ -80,6 +83,39 @@ export default function DashboardPage() {
     router.push("/login");
   };
 
+  // Fungsi untuk menghapus laporan
+  const handleDelete = async (id) => {
+    const confirm = window.confirm("Apakah Anda yakin ingin menghapus laporan ini? Tindakan ini tidak dapat dibatalkan.");
+    if (!confirm) return;
+
+    setDeletingId(id);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`http://localhost:5000/api/laporan/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        // Refresh daftar laporan
+        await fetchLaporan();
+        alert("Laporan berhasil dihapus.");
+      } else {
+        const error = await res.json();
+        alert(`Gagal menghapus: ${error.message || "Terjadi kesalahan"}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Terjadi kesalahan saat menghapus laporan.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // Fungsi untuk navigasi ke halaman edit
+  const handleEdit = (id) => {
+    router.push(`/edit-laporan/${id}`);
+  };
+
   // Filter by status + search (judul/deskripsi)
   const filteredLaporan = laporan.filter((item) => {
     const statusMatch = filter === "all" || item.status === filter;
@@ -118,7 +154,7 @@ export default function DashboardPage() {
       <Sidebar handleLogout={handleLogout} />
 
       <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
-        {/* HERO SECTION dengan gradien merah modern */}
+        {/* HERO SECTION */}
         <div className="relative bg-gradient-to-r from-red-800 to-red-900 rounded-3xl shadow-2xl p-8 mb-8 text-white overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full -ml-24 -mb-24"></div>
@@ -136,7 +172,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <button
-              onClick={() => router.push("/dashboard/add-laporan")}
+              onClick={() => router.push("/add-laporan")}
               className="bg-white text-red-800 hover:bg-red-50 px-6 py-3 rounded-2xl flex items-center gap-3 font-semibold shadow-lg transition-all duration-300 hover:scale-105"
             >
               <FaPlus /> Buat Laporan Baru
@@ -144,35 +180,31 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* STATISTIK CARD - desain modern dengan icon dan gradient */}
+        {/* STATISTIK CARD */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           <StatCard
             title="Total Laporan"
             value={laporan.length}
             icon={<FaClipboardList className="text-3xl" />}
             color="from-red-600 to-red-700"
-            bgGlow="red"
           />
           <StatCard
             title="Menunggu"
             value={totalPending}
             icon={<FaClock className="text-3xl" />}
             color="from-amber-500 to-amber-600"
-            bgGlow="amber"
           />
           <StatCard
             title="Diproses"
             value={totalDiproses}
             icon={<FaSpinner className="text-3xl animate-spin-slow" />}
             color="from-blue-500 to-blue-600"
-            bgGlow="blue"
           />
           <StatCard
             title="Selesai"
             value={totalSelesai}
             icon={<FaCheckCircle className="text-3xl" />}
             color="from-emerald-500 to-emerald-600"
-            bgGlow="emerald"
           />
         </div>
 
@@ -246,7 +278,7 @@ export default function DashboardPage() {
               <div className="text-6xl mb-4">📭</div>
               <p className="text-gray-500 text-lg">Belum ada laporan yang ditemukan.</p>
               <button
-                onClick={() => router.push("/dashboard/add-laporan")}
+                onClick={() => router.push("/add-laporan")}
                 className="mt-4 bg-red-600 text-white px-5 py-2 rounded-xl hover:bg-red-700 transition"
               >
                 Buat Laporan Sekarang
@@ -258,6 +290,8 @@ export default function DashboardPage() {
                 const fotoUrl = item.foto
                   ? `http://localhost:5000/uploads/${item.foto}`
                   : "https://images.unsplash.com/photo-1506744038136-46273834b3fb";
+
+                const canEditDelete = item.status === "pending"; // Hanya bisa diedit/dihapus jika masih pending
 
                 return (
                   <div
@@ -301,15 +335,48 @@ export default function DashboardPage() {
                             year: "numeric",
                           })}
                         </span>
-                        <button
-                          onClick={() =>
-                            router.push(`/dashboard/detail-laporan/${item.id}`)
-                          }
-                          className="flex items-center gap-2 text-red-600 hover:text-red-800 font-medium text-sm transition-all group-hover:gap-3"
-                        >
-                          Detail <FaArrowRight className="text-xs" />
-                        </button>
+                        <div className="flex gap-2">
+                          {/* Tombol Edit - hanya tampil jika bisa edit */}
+                          {canEditDelete && (
+                            <button
+                              onClick={() => handleEdit(item.id)}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              title="Edit laporan"
+                            >
+                              <FaEdit />
+                            </button>
+                          )}
+                          {/* Tombol Hapus - hanya tampil jika bisa hapus */}
+                          {canEditDelete && (
+                            <button
+                              onClick={() => handleDelete(item.id)}
+                              disabled={deletingId === item.id}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
+                              title="Hapus laporan"
+                            >
+                              {deletingId === item.id ? (
+                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                              ) : (
+                                <FaTrash />
+                              )}
+                            </button>
+                          )}
+                          <button
+                            onClick={() =>
+                              router.push(`/dashboard/detail-laporan/${item.id}`)
+                            }
+                            className="flex items-center gap-2 text-red-600 hover:text-red-800 font-medium text-sm transition-all group-hover:gap-3"
+                          >
+                            Detail <FaArrowRight className="text-xs" />
+                          </button>
+                        </div>
                       </div>
+                      {/* Pesan informasi jika tidak bisa diedit */}
+                      {!canEditDelete && (
+                        <p className="text-xs text-gray-400 mt-2 italic">
+                          ⚠️ Laporan sudah {item.status === "diproses" ? "diproses" : "selesai"}, tidak dapat diedit atau dihapus.
+                        </p>
+                      )}
                     </div>
                   </div>
                 );
@@ -322,8 +389,8 @@ export default function DashboardPage() {
   );
 }
 
-// Komponen StatCard terpisah dengan desain glassmorphism
-function StatCard({ title, value, icon, color, bgGlow }) {
+// Komponen StatCard
+function StatCard({ title, value, icon, color }) {
   return (
     <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${color} text-white shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.02]`}>
       <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8"></div>
@@ -339,8 +406,3 @@ function StatCard({ title, value, icon, color, bgGlow }) {
     </div>
   );
 }
-
-// Tambahkan animasi spin lambat di tailwind.config.js (opsional)
-// Untuk efek spin-slow, tambahkan di global.css:
-// @keyframes spin-slow { 100% { transform: rotate(360deg); } }
-// .animate-spin-slow { animation: spin-slow 3s linear infinite; }

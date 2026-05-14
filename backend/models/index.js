@@ -10,6 +10,7 @@ import {
 } from "../controllers/laporanController.js";
 
 
+
 import verifyToken from "../middleware/authMiddleware.js";
 
 import upload from "../middleware/upload.js";
@@ -52,5 +53,7 @@ router.get(
   verifyToken,
   getCategories
 );
+
+
 
 export default router;
