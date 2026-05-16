@@ -162,15 +162,15 @@ export default function SuperAdminDashboard() {
             </h2>
             <div className="space-y-3">
               <div className="flex justify-between items-center border-b pb-2">
-                <span className="flex items-center gap-2"><FaUser className="text-gray-600" /> User Biasa</span>
+                <span className="flex items-center gap-2 text-gray-700"><FaUser className="text-gray-600" /> User Biasa</span>
                 <span className="font-bold">{stats.totalUsers - stats.totalAdmins - stats.totalSuperAdmins}</span>
               </div>
               <div className="flex justify-between items-center border-b pb-2">
-                <span className="flex items-center gap-2"><FaUserCog className="text-blue-600" /> Admin</span>
+                <span className="flex items-center gap-2 text-gray-700"><FaUserCog className="text-blue-600" /> Admin</span>
                 <span className="font-bold">{stats.totalAdmins}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="flex items-center gap-2"><FaUserShield className="text-purple-600" /> Super Admin</span>
+                <span className="flex items-center gap-2 text-gray-700"><FaUserShield className="text-purple-600" /> Super Admin</span>
                 <span className="font-bold">{stats.totalSuperAdmins}</span>
               </div>
             </div>
@@ -181,15 +181,15 @@ export default function SuperAdminDashboard() {
             </h2>
             <div className="space-y-3">
               <div className="flex justify-between items-center border-b pb-2">
-                <span className="flex items-center gap-2"><FaClock className="text-amber-500" /> Pending</span>
+                <span className="flex items-center gap-2 text-amber-700"><FaClock className="text-amber-500" /> Pending</span>
                 <span className="font-bold">{stats.totalPending}</span>
               </div>
               <div className="flex justify-between items-center border-b pb-2">
-                <span className="flex items-center gap-2"><FaSpinner className="text-blue-500" /> Diproses</span>
+                <span className="flex items-center gap-2 text-blue-700"><FaSpinner className="text-blue-500" /> Diproses</span>
                 <span className="font-bold">{stats.totalDiproses}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="flex items-center gap-2"><FaCheckCircle className="text-emerald-500" /> Selesai</span>
+                <span className="flex items-center gap-2 text-emerald-800"><FaCheckCircle className="text-emerald-500" /> Selesai</span>
                 <span className="font-bold">{stats.totalSelesai}</span>
               </div>
             </div>

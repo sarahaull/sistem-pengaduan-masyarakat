@@ -112,10 +112,42 @@ export default function DashboardPage() {
   };
 
   // Fungsi untuk navigasi ke halaman edit
-  const handleEdit = (id) => {
-    router.push(`/edit-laporan/${id}`);
-  };
+  const handleEdit = async (id) => {
+  const item = laporan.find((l) => l.id === id);
+  if (!item) return;
 
+  const judul = prompt("Edit Judul:", item.judul);
+  if (judul === null) return;
+
+  const deskripsi = prompt("Edit Deskripsi:", item.deskripsi);
+  if (deskripsi === null) return;
+
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`http://localhost:5000/api/laporan/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ judul, deskripsi }),
+    });
+
+    // 🔥 TARUH DI SINI (GANTI YANG LAMA)
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.log("ERROR RESPONSE:", errorText);
+      throw new Error("Gagal update");
+    }
+
+    await fetchLaporan();
+    alert("Laporan berhasil diupdate");
+  } catch (err) {
+    console.error(err);
+    alert("Gagal update laporan");
+  }
+};
   // Filter by status + search (judul/deskripsi)
   const filteredLaporan = laporan.filter((item) => {
     const statusMatch = filter === "all" || item.status === filter;

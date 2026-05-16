@@ -11,13 +11,11 @@ import {
   FaEdit,
   FaSave,
   FaSignOutAlt,
-  FaTimes,
-  FaClipboardList,
-  FaCheckCircle,
-  FaSpinner,
-  FaClock,
-  FaExclamationTriangle,
   FaLock,
+  FaCheckCircle,
+  FaTimes,
+  FaUserCircle,
+  FaIdCard,
 } from "react-icons/fa";
 
 const BASE_URL = "http://localhost:5000";
@@ -27,13 +25,13 @@ export default function AdminProfilePage() {
 
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const [profile, setProfile] = useState({
     nama: "",
     email: "",
     no_telepon: "",
+    role: "",
     foto: null,
   });
 
@@ -49,170 +47,80 @@ export default function AdminProfilePage() {
     konfirmasi: "",
   });
 
-  const [stats, setStats] = useState({
-    total: 0,
-    pending: 0,
-    diproses: 0,
-    selesai: 0,
-    ditolak: 0,
-  });
-
   const [message, setMessage] = useState({ text: "", type: "" });
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    router.push("/login");
+  };
 
   useEffect(() => {
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-    fetchProfile();
-    fetchStats();
-  }, []);
-
-  // Fetch data profil admin
-  const fetchProfile = async () => {
-    try {
-      const res = await fetch(`${BASE_URL}/api/admin/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setProfile({
-          nama: data.nama || "",
-          email: data.email || "",
-          no_telepon: data.no_telepon || "",
-          foto: data.foto || null,
+    const fetchProfile = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+      try {
+        const res = await fetch(`${BASE_URL}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.msg || "Gagal ambil profile");
+        setProfile(data);
         setForm({
           nama: data.nama || "",
           email: data.email || "",
           no_telepon: data.no_telepon || "",
         });
-      } else {
-        setMessage({ text: data.msg || "Gagal load profil", type: "error" });
+      } catch (err) {
+        setMessage({ text: err.message, type: "error" });
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      setMessage({ text: "Server error", type: "error" });
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    fetchProfile();
+  }, [router]);
 
-  // Fetch statistik laporan (untuk ditampilkan di dashboard admin)
-  const fetchStats = async () => {
-    try {
-      const res = await fetch(`${BASE_URL}/api/admin/laporan`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok && Array.isArray(data)) {
-        const total = data.length;
-        const pending = data.filter((l) => l.status === "pending").length;
-        const diproses = data.filter((l) => l.status === "diproses").length;
-        const selesai = data.filter((l) => l.status === "selesai").length;
-        const ditolak = data.filter((l) => l.status === "ditolak").length;
-        setStats({ total, pending, diproses, selesai, ditolak });
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // Update profil
   const updateProfile = async (e) => {
     e.preventDefault();
+    const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${BASE_URL}/api/admin/profile`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (res.ok) {
-        setProfile((prev) => ({ ...prev, ...form }));
-        setEditing(false);
-        setMessage({ text: "Profil berhasil diperbarui", type: "success" });
-        setTimeout(() => setMessage({ text: "", type: "" }), 3000);
-      } else {
-        setMessage({ text: data.msg || "Gagal update", type: "error" });
-      }
+      if (!res.ok) throw new Error(data.msg || "Gagal update profile");
+      setProfile((prev) => ({ ...prev, ...form }));
+      setEditing(false);
+      setMessage({ text: "Profile berhasil diupdate", type: "success" });
     } catch (err) {
-      setMessage({ text: "Server error", type: "error" });
+      setMessage({ text: err.message, type: "error" });
     }
   };
 
-  // Ganti password
   const changePassword = async (e) => {
     e.preventDefault();
     if (password.baru !== password.konfirmasi) {
-      setMessage({ text: "Password baru tidak cocok", type: "error" });
-      return;
+      return setMessage({ text: "Password baru tidak cocok", type: "error" });
     }
-    if (password.baru.length < 6) {
-      setMessage({ text: "Minimal 6 karakter", type: "error" });
-      return;
-    }
+    const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${BASE_URL}/api/admin/change-password`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          currentPassword: password.current,
-          newPassword: password.baru,
-        }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ currentPassword: password.current, newPassword: password.baru }),
       });
       const data = await res.json();
-      if (res.ok) {
-        setMessage({ text: "Password berhasil diubah", type: "success" });
-        setShowPassword(false);
-        setPassword({ current: "", baru: "", konfirmasi: "" });
-        setTimeout(() => setMessage({ text: "", type: "" }), 3000);
-      } else {
-        setMessage({ text: data.msg || "Gagal ganti password", type: "error" });
-      }
+      if (!res.ok) throw new Error(data.msg || "Gagal ganti password");
+      setPassword({ current: "", baru: "", konfirmasi: "" });
+      setShowPassword(false);
+      setMessage({ text: "Password berhasil diubah", type: "success" });
     } catch (err) {
-      setMessage({ text: "Server error", type: "error" });
+      setMessage({ text: err.message, type: "error" });
     }
-  };
-
-  // Upload foto profil
-  const uploadFoto = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.append("foto", file);
-    setUploading(true);
-    try {
-      const res = await fetch(`${BASE_URL}/api/admin/upload-foto`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setProfile((prev) => ({ ...prev, foto: data.foto }));
-        setMessage({ text: "Foto berhasil diupdate", type: "success" });
-        setTimeout(() => setMessage({ text: "", type: "" }), 3000);
-      } else {
-        setMessage({ text: data.msg || "Upload gagal", type: "error" });
-      }
-    } catch (err) {
-      setMessage({ text: "Error upload", type: "error" });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    router.push("/login");
   };
 
   if (loading) {
@@ -221,8 +129,8 @@ export default function AdminProfilePage() {
         <AdminSidebar handleLogout={handleLogout} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="w-10 h-10 border-2 border-red-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="mt-3 text-gray-500">Memuat profil admin...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Memuat profil...</p>
           </div>
         </div>
       </div>
@@ -230,237 +138,204 @@ export default function AdminProfilePage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-red-50">
       <AdminSidebar handleLogout={handleLogout} />
       <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">
-            Profil <span className="text-red-600">Admin</span>
-          </h1>
-          <p className="text-gray-400 mt-1">Kelola informasi akun administrator</p>
-        </div>
-
-        {/* Notifikasi */}
-        {message.text && (
-          <div
-            className={`mb-6 p-3 rounded-lg flex items-center gap-2 text-sm ${
-              message.type === "success"
-                ? "bg-green-50 text-green-700 border-l-4 border-green-500"
-                : "bg-red-50 text-red-600 border-l-4 border-red-500"
-            }`}
-          >
-            {message.type === "success" ? <FaCheckCircle /> : <FaTimes />} {message.text}
+        <div className="max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+              <div className="bg-red-600 p-2 rounded-xl shadow-md">
+                <FaUserCircle className="text-white text-2xl" />
+              </div>
+              <span>Profil <span className="text-red-600">Admin</span></span>
+            </h1>
+            <p className="text-gray-500 mt-1 ml-1">Kelola informasi akun dan keamanan Anda</p>
           </div>
-        )}
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Kiri: Avatar, Statistik, Logout */}
-          <div className="space-y-6">
-            {/* Card Avatar */}
-            <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-6 text-center">
-              <div className="relative inline-block">
-                <div className="w-28 h-28 mx-auto rounded-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center overflow-hidden shadow-inner">
-                  {profile.foto ? (
-                    <img
-                      src={`${BASE_URL}/uploads/${profile.foto}`}
-                      className="w-full h-full object-cover"
-                      alt="foto"
-                    />
+          {/* Message */}
+          {message.text && (
+            <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 shadow-sm ${
+              message.type === "success"
+                ? "bg-green-50 border-l-4 border-green-500 text-green-700"
+                : "bg-red-50 border-l-4 border-red-500 text-red-700"
+            }`}>
+              {message.type === "success" ? <FaCheckCircle className="text-green-500" /> : <FaTimes className="text-red-500" />}
+              <span>{message.text}</span>
+              <button onClick={() => setMessage({ text: "", type: "" })} className="ml-auto text-gray-400 hover:text-gray-600">
+                <FaTimes />
+              </button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Profile Card Kiri */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-red-100 sticky top-6">
+                <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 text-center">
+                  <div className="relative inline-block">
+                    <div className="w-32 h-32 mx-auto rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border-4 border-white shadow-lg">
+                      {profile.foto ? (
+                        <img src={`${BASE_URL}/uploads/${profile.foto}`} className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        <FaUser className="text-5xl text-white" />
+                      )}
+                    </div>
+                    <button className="absolute bottom-0 right-0 bg-white p-2 rounded-full shadow-md hover:bg-red-50 transition">
+                      <FaCamera className="text-red-600 text-sm" />
+                    </button>
+                  </div>
+                  <h2 className="mt-4 text-xl font-bold text-white">{profile.nama}</h2>
+                  <p className="text-red-100 text-sm">{profile.email}</p>
+                  <span className="inline-block mt-2 px-3 py-1 bg-white/20 rounded-full text-xs font-semibold text-white">
+                    {profile.role === "super_admin" ? "Super Admin" : profile.role === "admin" ? "Admin" : "User"}
+                  </span>
+                </div>
+                <div className="p-6 space-y-3">
+                  <div className="flex items-center gap-3 text-gray-600">
+                    <FaEnvelope className="text-red-500 w-4" />
+                    <span className="text-sm">{profile.email}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-600">
+                    <FaPhone className="text-red-500 w-4" />
+                    <span className="text-sm">{profile.no_telepon || "Belum diisi"}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-600">
+                    <FaIdCard className="text-red-500 w-4" />
+                    <span className="text-sm">ID: {profile.id || "-"}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Form Kanan */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Informasi Akun */}
+              <div className="bg-white rounded-2xl shadow-xl border border-red-100 overflow-hidden">
+                <div className="px-6 py-4 bg-gradient-to-r from-red-50 to-white border-b border-red-100">
+                  <h2 className="font-semibold text-gray-800 flex items-center gap-2">
+                    <FaEdit className="text-red-500" /> Informasi Akun
+                  </h2>
+                  <p className="text-sm text-gray-500">Perbarui data diri Anda</p>
+                </div>
+                <form onSubmit={updateProfile} className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+                    <div className="flex items-center border border-gray-200 rounded-xl p-3 focus-within:ring-2 focus-within:ring-red-500 focus-within:border-transparent transition">
+                      <FaUser className="text-gray-400 mr-3" />
+                      <input
+                        type="text"
+                        value={form.nama}
+                        onChange={(e) => setForm({ ...form, nama: e.target.value })}
+                        className="w-full outline-none bg-transparent"
+                        placeholder="Masukkan nama lengkap"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <div className="flex items-center border border-gray-200 rounded-xl p-3 focus-within:ring-2 focus-within:ring-red-500 focus-within:border-transparent transition">
+                      <FaEnvelope className="text-gray-400 mr-3" />
+                      <input
+                        type="email"
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        className="w-full outline-none bg-transparent"
+                        placeholder="Masukkan email"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Telepon</label>
+                    <div className="flex items-center border border-gray-200 rounded-xl p-3 focus-within:ring-2 focus-within:ring-red-500 focus-within:border-transparent transition">
+                      <FaPhone className="text-gray-400 mr-3" />
+                      <input
+                        type="tel"
+                        value={form.no_telepon}
+                        onChange={(e) => setForm({ ...form, no_telepon: e.target.value })}
+                        className="w-full outline-none bg-transparent"
+                        placeholder="Masukkan nomor HP"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 transition shadow-md hover:shadow-lg"
+                  >
+                    <FaSave /> Simpan Perubahan
+                  </button>
+                </form>
+              </div>
+
+              {/* Ganti Password */}
+              <div className="bg-white rounded-2xl shadow-xl border border-red-100 overflow-hidden">
+                <div className="px-6 py-4 bg-gradient-to-r from-red-50 to-white border-b border-red-100">
+                  <h2 className="font-semibold text-gray-800 flex items-center gap-2">
+                    <FaLock className="text-red-500" /> Keamanan Akun
+                  </h2>
+                  <p className="text-sm text-gray-500">Ubah password untuk menjaga keamanan</p>
+                </div>
+                <div className="p-6">
+                  {!showPassword ? (
+                    <button
+                      onClick={() => setShowPassword(true)}
+                      className="text-red-600 hover:text-red-700 font-medium flex items-center gap-2"
+                    >
+                      <FaLock /> Ganti Password
+                    </button>
                   ) : (
-                    <FaUser className="text-5xl text-red-400" />
+                    <form onSubmit={changePassword} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Password Lama</label>
+                        <input
+                          type="password"
+                          placeholder="Masukkan password lama"
+                          value={password.current}
+                          onChange={(e) => setPassword({ ...password, current: e.target.value })}
+                          className="w-full border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-red-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Password Baru</label>
+                        <input
+                          type="password"
+                          placeholder="Masukkan password baru"
+                          value={password.baru}
+                          onChange={(e) => setPassword({ ...password, baru: e.target.value })}
+                          className="w-full border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-red-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password Baru</label>
+                        <input
+                          type="password"
+                          placeholder="Konfirmasi password baru"
+                          value={password.konfirmasi}
+                          onChange={(e) => setPassword({ ...password, konfirmasi: e.target.value })}
+                          className="w-full border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-red-500"
+                        />
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          type="submit"
+                          className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl transition shadow-md"
+                        >
+                          Ubah Password
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPassword(false);
+                            setPassword({ current: "", baru: "", konfirmasi: "" });
+                          }}
+                          className="border border-gray-300 px-5 py-2.5 rounded-xl hover:bg-gray-50 transition"
+                        >
+                          Batal
+                        </button>
+                      </div>
+                    </form>
                   )}
                 </div>
-                <label className="absolute bottom-0 right-0 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full cursor-pointer shadow-lg transition">
-                  <FaCamera size={12} />
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={uploadFoto}
-                    disabled={uploading}
-                  />
-                </label>
-              </div>
-              <h2 className="mt-4 text-xl font-bold text-gray-800">{profile.nama || "Admin"}</h2>
-              <p className="text-gray-400 text-sm">{profile.email}</p>
-
-              {/* Statistik ringkas */}
-              <div className="mt-5 pt-4 border-t border-gray-100">
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <p className="text-xl font-bold text-red-600">{stats.total}</p>
-                    <p className="text-xs text-gray-400">Total</p>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-amber-600">{stats.pending}</p>
-                    <p className="text-xs text-gray-400">Pending</p>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-green-600">{stats.selesai}</p>
-                    <p className="text-xs text-gray-400">Selesai</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Tombol Logout */}
-            <button
-              onClick={handleLogout}
-              className="w-full bg-white border border-red-200 text-red-600 py-2.5 rounded-xl hover:bg-red-50 transition flex items-center justify-center gap-2 shadow-sm"
-            >
-              <FaSignOutAlt /> Keluar Akun
-            </button>
-          </div>
-
-          {/* Kanan: Edit Profil + Ganti Password */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Informasi Akun */}
-            <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-              <div className="px-6 py-4 bg-gradient-to-r from-red-50 to-white border-b flex justify-between items-center">
-                <h2 className="font-semibold text-gray-700 flex items-center gap-2">
-                  <FaUser className="text-red-500" /> Informasi Akun
-                </h2>
-                {!editing && (
-                  <button
-                    onClick={() => {
-                      setEditing(true);
-                      setForm({
-                        nama: profile.nama,
-                        email: profile.email,
-                        no_telepon: profile.no_telepon || "",
-                      });
-                    }}
-                    className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1"
-                  >
-                    <FaEdit size={12} /> Edit
-                  </button>
-                )}
-              </div>
-              <div className="p-6">
-                {!editing ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <FaUser className="text-gray-400 w-5" />
-                      <span className="text-gray-700">{profile.nama}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <FaEnvelope className="text-gray-400 w-5" />
-                      <span className="text-gray-700">{profile.email}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <FaPhone className="text-gray-400 w-5" />
-                      <span className="text-gray-700">
-                        {profile.no_telepon || "Belum diisi"}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <form onSubmit={updateProfile} className="space-y-4">
-                    <input
-                      type="text"
-                      value={form.nama}
-                      onChange={(e) => setForm({ ...form, nama: e.target.value })}
-                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-red-300"
-                      placeholder="Nama"
-                      required
-                    />
-                    <input
-                      type="email"
-                      value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-red-300"
-                      placeholder="Email"
-                      required
-                    />
-                    <input
-                      type="tel"
-                      value={form.no_telepon}
-                      onChange={(e) => setForm({ ...form, no_telepon: e.target.value })}
-                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-red-300"
-                      placeholder="No. Telepon"
-                    />
-                    <div className="flex gap-3 pt-2">
-                      <button
-                        type="submit"
-                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
-                      >
-                        <FaSave /> Simpan
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditing(false)}
-                        className="border px-4 py-2 rounded-lg hover:bg-gray-50 transition"
-                      >
-                        Batal
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            </div>
-
-            {/* Ganti Password */}
-            <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-              <div className="px-6 py-4 bg-gradient-to-r from-red-50 to-white border-b flex justify-between items-center">
-                <h2 className="font-semibold text-gray-700 flex items-center gap-2">
-                  <FaLock className="text-red-500" /> Keamanan
-                </h2>
-                {!showPassword && (
-                  <button
-                    onClick={() => setShowPassword(true)}
-                    className="text-red-500 text-sm hover:underline"
-                  >
-                    Ganti Password
-                  </button>
-                )}
-              </div>
-              <div className="p-6">
-                {!showPassword ? (
-                  <p className="text-gray-400 text-center">••••••••</p>
-                ) : (
-                  <form onSubmit={changePassword} className="space-y-4">
-                    <input
-                      type="password"
-                      value={password.current}
-                      onChange={(e) => setPassword({ ...password, current: e.target.value })}
-                      className="w-full p-2 border rounded-lg"
-                      placeholder="Password saat ini"
-                      required
-                    />
-                    <input
-                      type="password"
-                      value={password.baru}
-                      onChange={(e) => setPassword({ ...password, baru: e.target.value })}
-                      className="w-full p-2 border rounded-lg"
-                      placeholder="Password baru (min. 6 karakter)"
-                      required
-                    />
-                    <input
-                      type="password"
-                      value={password.konfirmasi}
-                      onChange={(e) => setPassword({ ...password, konfirmasi: e.target.value })}
-                      className="w-full p-2 border rounded-lg"
-                      placeholder="Konfirmasi password baru"
-                      required
-                    />
-                    <div className="flex gap-3 pt-2">
-                      <button
-                        type="submit"
-                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition"
-                      >
-                        Simpan Password
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(false)}
-                        className="border px-4 py-2 rounded-lg hover:bg-gray-50 transition"
-                      >
-                        Batal
-                      </button>
-                    </div>
-                  </form>
-                )}
               </div>
             </div>
           </div>
