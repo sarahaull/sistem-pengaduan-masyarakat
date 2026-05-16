@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/user.js';
 import dotenv from 'dotenv';
+import db from "../config/db.js";
 dotenv.config();
 
 export const register = async (req, res) => {
@@ -47,10 +48,27 @@ export const login = async (req, res) => {
 export const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ msg: 'User tidak ditemukan' });
-    res.json(user);
+
+    if (!user) {
+      return res.status(404).json({ msg: "User tidak ditemukan" });
+    }
+
+    // kirim format yang sesuai frontend kamu
+    res.json({
+      id: user.id,
+      nama: user.nama,
+      email: user.email,
+      role: user.role,
+      no_telepon: user.no_telepon || "",
+      foto: user.foto || null,
+    });
+
   } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({ msg: "Server error" });
   }
 };
+
+
+
+
 

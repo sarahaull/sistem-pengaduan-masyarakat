@@ -29,4 +29,6 @@ const Comment = {
     return result;
   }
 };
+
+
 export default Comment;

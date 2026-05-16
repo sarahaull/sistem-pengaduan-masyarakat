@@ -50,17 +50,27 @@ export const getSuperAdminDashboard = async (req, res) => {
  */
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password");
+    const [rows] = await db.query(`
+      SELECT 
+        id,
+        nama AS name,
+        email,
+        role,
+        created_at
+      FROM users
+      ORDER BY id DESC
+    `);
 
-    res.json({
+    return res.json({
       success: true,
-      data: users,
+      data: rows,
     });
-  } catch (error) {
-    res.status(500).json({
+  } catch (err) {
+    console.log("GET USERS ERROR:", err);
+
+    return res.status(500).json({
       success: false,
-      message: "Gagal mengambil data user",
-      error: error.message,
+      message: err.message,
     });
   }
 };
@@ -112,25 +122,33 @@ export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const user = await User.findById(id);
-    if (!user) {
+    const [user] = await db.query(
+      "SELECT * FROM users WHERE id = ?",
+      [id]
+    );
+
+    if (user.length === 0) {
       return res.status(404).json({
         success: false,
         message: "User tidak ditemukan",
       });
     }
 
-    await User.findByIdAndDelete(id);
+    await db.query(
+      "DELETE FROM users WHERE id = ?",
+      [id]
+    );
 
-    res.json({
+    return res.json({
       success: true,
       message: "User berhasil dihapus",
     });
-  } catch (error) {
-    res.status(500).json({
+  } catch (err) {
+    console.log("DELETE USER ERROR:", err);
+
+    return res.status(500).json({
       success: false,
-      message: "Gagal menghapus user",
-      error: error.message,
+      message: err.message,
     });
   }
 };
@@ -233,5 +251,154 @@ export const getRecentLaporan = async (req, res) => {
   } catch (err) {
     console.log("LAPORAN ERROR:", err);
     return res.status(500).json({ message: err.message });
+  }
+};
+
+
+// =========================
+// CREATE USER
+// =========================
+export const createUser = async (req, res) => {
+  try {
+    const { name, email, password, role } = req.body;
+
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({
+        success: false,
+        message: "Semua field wajib diisi",
+      });
+    }
+
+    // cek email
+    const [existing] = await db.query(
+      "SELECT * FROM users WHERE email = ?",
+      [email]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Email sudah digunakan",
+      });
+    }
+
+    await db.query(
+      `
+      INSERT INTO users (nama, email, password, role)
+      VALUES (?, ?, ?, ?)
+      `,
+      [name, email, password, role]
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "User berhasil ditambahkan",
+    });
+  } catch (err) {
+    console.log("CREATE USER ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+// =========================
+// UPDATE USER
+// =========================
+export const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { name, email, password, role } = req.body;
+
+    // cek user
+    const [user] = await db.query(
+      "SELECT * FROM users WHERE id = ?",
+      [id]
+    );
+
+    if (user.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User tidak ditemukan",
+      });
+    }
+
+    // update dengan password
+    if (password) {
+      await db.query(
+        `
+        UPDATE users
+        SET nama=?, email=?, password=?, role=?
+        WHERE id=?
+        `,
+        [name, email, password, role, id]
+      );
+    } else {
+      await db.query(
+        `
+        UPDATE users
+        SET nama=?, email=?, role=?
+        WHERE id=?
+        `,
+        [name, email, role, id]
+      );
+    }
+
+    return res.json({
+      success: true,
+      message: "User berhasil diupdate",
+    });
+  } catch (err) {
+    console.log("UPDATE USER ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+
+export const getAllLaporan = async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT * FROM laporan ORDER BY created_at DESC
+    `);
+
+    res.json({
+      laporan: rows,
+    });
+  } catch (err) {
+    console.log("ERROR getAllLaporan:", err);
+    res.status(500).json({
+      msg: "Gagal mengambil semua laporan",
+      error: err.message,
+    });
+  }
+};
+
+export const getActivityLogs = async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        al.id,
+        al.user_id,
+        u.nama AS user_name,
+        al.action,
+        al.details,
+        al.ip_address,
+        al.created_at AS timestamp
+      FROM activity_logs al
+      LEFT JOIN users u ON u.id = al.user_id
+      ORDER BY al.created_at DESC
+    `);
+
+    return res.status(200).json(rows);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Gagal mengambil activity log" });
   }
 };

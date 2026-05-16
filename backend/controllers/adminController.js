@@ -43,7 +43,7 @@ export const getDashboardAdmin = async (req, res) => {
         laporan.id,
         laporan.judul,
         laporan.deskripsi,
-        laporan.gambar,
+        laporan.foto,
         laporan.status,
         laporan.created_at,
 
@@ -326,18 +326,38 @@ export const changeAdminPassword = async (
 // =========================
 // GET LAPORAN ADMIN
 // =========================
-export const getAdminLaporan = async (
-  req,
-  res
-) => {
+// =========================
+// GET LAPORAN ADMIN
+// =========================
+export const getAdminLaporan = async (req, res) => {
   try {
     const [laporan] = await db.query(`
-      SELECT *
+      SELECT 
+        laporan.id,
+        laporan.judul,
+        laporan.deskripsi,
+        laporan.foto,
+        laporan.status,
+        laporan.created_at,
+
+        users.nama AS nama_user,
+        users.email AS email,
+
+        categories.nama AS kategori
+
       FROM laporan
-      ORDER BY created_at DESC
+
+      LEFT JOIN users
+      ON laporan.user_id = users.id
+
+      LEFT JOIN categories
+      ON laporan.kategori_id = categories.id
+
+      ORDER BY laporan.created_at DESC
     `);
 
     res.json(laporan);
+
   } catch (error) {
     console.log(error);
 
@@ -400,5 +420,46 @@ export const updateUserRole = async (req, res) => {
   } catch (error) {
     console.log(error);
     res.status(500).json({ msg: "Server error" });
+  }
+};
+
+export const deleteLaporanAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // cek laporan ada atau tidak
+    const [rows] = await db.query(
+      "SELECT * FROM laporan WHERE id = ?",
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        msg: "Laporan tidak ditemukan",
+      });
+    }
+
+    // hapus komentar dulu kalau ada foreign key
+    await db.query(
+      "DELETE FROM comments WHERE laporan_id = ?",
+      [id]
+    );
+
+    // hapus laporan
+    await db.query(
+      "DELETE FROM laporan WHERE id = ?",
+      [id]
+    );
+
+    res.json({
+      msg: "Laporan berhasil dihapus admin",
+    });
+
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      msg: "Server error",
+    });
   }
 };

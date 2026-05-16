@@ -111,9 +111,27 @@ export const updateStatusLaporan = async (req, res) => {
 // ================= DELETE =================
 export const deleteLaporan = async (req, res) => {
   try {
-    await db.query("DELETE FROM laporan WHERE id = ?", [
-      req.params.id,
-    ]);
+    const { id } = req.params;
+
+    const [rows] = await db.query(
+      "SELECT * FROM laporan WHERE id = ? AND user_id = ?",
+      [id, req.user.id]
+    );
+
+    const laporan = rows[0];
+
+    if (!laporan) {
+      return res.status(404).json({ msg: "Laporan tidak ditemukan" });
+    }
+
+    // 🔥 BLOCK JIKA SUDAH DIPROSES
+    if (laporan.status !== "pending") {
+      return res.status(403).json({
+        msg: "Laporan tidak bisa dihapus karena sudah diproses admin",
+      });
+    }
+
+    await db.query("DELETE FROM laporan WHERE id = ?", [id]);
 
     res.json({ msg: "Laporan dihapus" });
   } catch (err) {
@@ -128,6 +146,42 @@ export const getCategories = async (req, res) => {
   try {
     const categories = await Category.findAll();
     res.json(categories);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ msg: "Server error" });
+  }
+};
+
+export const updateLaporan = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { judul, deskripsi } = req.body;
+
+    // ambil laporan dulu
+    const [rows] = await db.query(
+      "SELECT * FROM laporan WHERE id = ? AND user_id = ?",
+      [id, req.user.id]
+    );
+
+    const laporan = rows[0];
+
+    if (!laporan) {
+      return res.status(404).json({ msg: "Laporan tidak ditemukan" });
+    }
+
+    // 🔥 BLOCK JIKA SUDAH DIPROSES
+    if (laporan.status !== "pending") {
+      return res.status(403).json({
+        msg: "Laporan tidak bisa diubah karena sudah diproses admin",
+      });
+    }
+
+    await db.query(
+      "UPDATE laporan SET judul=?, deskripsi=? WHERE id=? AND user_id=?",
+      [judul, deskripsi, id, req.user.id]
+    );
+
+    res.json({ msg: "Laporan berhasil diupdate" });
   } catch (err) {
     console.log(err);
     res.status(500).json({ msg: "Server error" });

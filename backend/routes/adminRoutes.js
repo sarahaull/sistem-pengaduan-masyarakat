@@ -14,7 +14,14 @@ import {
   getAllUsers,
   deleteUser,
   updateUserRole,
+  deleteLaporanAdmin,
 } from "../controllers/adminController.js";
+
+import {
+  getAllCommentsAdmin,
+  updateCommentAdmin,
+  deleteCommentAdmin,
+} from "../controllers/commentAdminController.js";
 
 const router = express.Router();
 
@@ -33,6 +40,10 @@ router.get("/profile", auth, getAdminProfile);
 router.put("/profile", auth, updateAdminProfile);
 
 router.get("/laporan", auth, getAdminLaporan);
+router.delete("/laporan/:id", auth, deleteLaporanAdmin);
+router.get("/comments", auth, getAllCommentsAdmin);
+router.put("/comments/:id", auth, updateCommentAdmin);
+router.delete("/comments/:id", auth, deleteCommentAdmin);
 
 router.post("/upload-foto", auth, upload.single("foto"), uploadAdminFoto);
 

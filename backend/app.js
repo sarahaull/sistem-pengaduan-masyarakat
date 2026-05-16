@@ -8,8 +8,11 @@ import { fileURLToPath } from "url";
 import router from "./routes/index.js";
 import chatRoute from "./routes/chatRoute.js";
 import userRoutes from "./routes/userRoutes.js";
+import commentRoutes from "./routes/commentRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import superAdminRoutes from "./routes/superAdminRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
+import adminCommentRoutes from "./routes/adminCommentRoutes.js";
 
 dotenv.config();
 
@@ -35,6 +38,9 @@ app.use("/api/super-admin", superAdminRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api", router);
 app.use("/api/chat", chatRoute);
+app.use("/api/comments", commentRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/admin/comments", adminCommentRoutes);
 
 app.use((err, req, res, next) => {
   console.log("🔥 SERVER ERROR:", err);
@@ -46,6 +52,8 @@ app.use((err, req, res, next) => {
 if (!fs.existsSync("uploads")) {
   fs.mkdirSync("uploads");
 }
+
+
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const PORT = 5000;

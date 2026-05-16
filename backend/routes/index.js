@@ -3,6 +3,7 @@ import auth from "../middleware/auth.js";
 import role from "../middleware/role.js";
 import upload from "../middleware/upload.js";
 
+
 // controllers
 import {
   createLaporan,
@@ -12,6 +13,7 @@ import {
   deleteLaporan,
   getCategories,
   getAllLaporanAdmin,
+   updateLaporan
 } from "../controllers/laporanController.js";
 
 import {
@@ -56,6 +58,8 @@ router.put("/profile", auth, updateProfile);
 router.get("/laporan", auth, getAllLaporan);
 router.post("/laporan", auth, upload.single("foto"), createLaporan);
 router.get("/laporan/:id", auth, getLaporanById);
+router.put("/laporan/:id", auth, updateLaporan);
+router.delete("/laporan/:id", auth, deleteLaporan);
 
 /* ================= ADMIN + SUPER ADMIN LAPORAN ================= */
 router.get(
@@ -159,5 +163,20 @@ router.put(
   role("admin", "super_admin"),
   changeAdminPassword
 );
+
+router.get("/comments", auth, async (req, res) => {
+  const { laporan_id } = req.query;
+
+  try {
+    const Comment = (await import("../models/comment.js")).default;
+
+    const data = await Comment.findByLaporanId(laporan_id);
+
+    res.json(data);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
 
 export default router;

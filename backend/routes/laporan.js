@@ -7,54 +7,25 @@ import {
   getAllLaporanAdmin,
   updateStatusLaporan,
   getLaporanById,
+  updateLaporan,
+  deleteLaporan
 } from "../controllers/laporanController.js";
 
 const router = express.Router();
 
 // USER
 router.get("/laporan", auth, getAllLaporan);
+router.post("/laporan", auth, createLaporan);
 
-
-// ADMIN
+// DETAIL
 router.get("/laporan/admin", auth, getAllLaporanAdmin);
-
-// DETAIL (FIX 1 SAJA)
 router.get("/laporan/:id", auth, getLaporanById);
 
-// UPDATE STATUS (FIX 2)
+// UPDATE + DELETE (USER)
+router.put("/laporan/:id", auth, updateLaporan);
+router.delete("/laporan/:id", auth, deleteLaporan);
+
+// STATUS ADMIN
 router.put("/laporan/:id/status", auth, updateStatusLaporan);
-
-let laporan = [
-  {
-    id: 1,
-    judul: "Lampu jalan mati",
-    status: "pending",
-    isRead: false,
-  },
-  {
-    id: 2,
-    judul: "Jalan rusak",
-    status: "pending",
-    isRead: false,
-  },
-];
-
-export async function GET() {
-  return Response.json(laporan);
-}
-
-export async function POST(req) {
-  const body = await req.json();
-
-  const newLaporan = {
-    id: Date.now(),
-    ...body,
-    isRead: false,
-  };
-
-  laporan.push(newLaporan);
-
-  return Response.json(newLaporan);
-}
 
 export default router;
