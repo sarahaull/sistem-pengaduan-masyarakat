@@ -13,8 +13,10 @@ import {
   FaInfoCircle,
   FaTrashAlt,
   FaReply,
-  FaCheck,
   FaTimes,
+  FaCheckCircle,
+  FaFolderOpen,
+  FaMapMarkerAlt,
 } from "react-icons/fa";
 
 const API = "http://localhost:5000/api";
@@ -22,19 +24,20 @@ const API = "http://localhost:5000/api";
 export default function UserCommentsPage() {
   const [laporanList, setLaporanList] = useState([]);
   const [selectedLaporan, setSelectedLaporan] = useState(null);
-  const [comments, setComments] = useState([]); // flat array with parent_id
+  const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
-  const [replyingTo, setReplyingTo] = useState(null); // { id, userName }
+  const [replyingTo, setReplyingTo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const [currentUserId, setCurrentUserId] = useState(null);
 
-  // fetch user info for current user (to know which comments are his)
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+  // Fetch current user
   useEffect(() => {
     const fetchUser = async () => {
       if (!token) return;
@@ -51,6 +54,7 @@ export default function UserCommentsPage() {
     fetchUser();
   }, [token]);
 
+  // Fetch user's laporan
   const fetchMyLaporan = async () => {
     try {
       setLoading(true);
@@ -77,12 +81,10 @@ export default function UserCommentsPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.msg);
-      // data diharapkan array komentar dengan field parent_id, user_id, dll
+      console.log("COMMENTS =", data);
       setComments(data);
     } catch (err) {
-      setComments([]);
-      setError(err.message);
+      console.log(err);
     }
   };
 
@@ -90,6 +92,7 @@ export default function UserCommentsPage() {
     e.preventDefault();
     if (!newComment.trim()) return;
     setSubmitting(true);
+    setError("");
     try {
       const payload = {
         laporan_id: selectedLaporan.id,
@@ -110,6 +113,8 @@ export default function UserCommentsPage() {
       if (!res.ok) throw new Error(data.msg);
       setNewComment("");
       setReplyingTo(null);
+      setSuccessMsg("Komentar berhasil dikirim");
+      setTimeout(() => setSuccessMsg(""), 3000);
       fetchComments(selectedLaporan.id);
     } catch (err) {
       setError(err.message);
@@ -128,6 +133,8 @@ export default function UserCommentsPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.msg);
+      setSuccessMsg("Komentar dihapus");
+      setTimeout(() => setSuccessMsg(""), 3000);
       fetchComments(selectedLaporan.id);
     } catch (err) {
       setError(err.message);
@@ -145,7 +152,7 @@ export default function UserCommentsPage() {
     fetchMyLaporan();
   }, []);
 
-  const filtered = laporanList.filter((l) =>
+  const filteredLaporan = laporanList.filter((l) =>
     (l.judul || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -155,7 +162,7 @@ export default function UserCommentsPage() {
     const map = {
       pending: "bg-amber-100 text-amber-800",
       diproses: "bg-blue-100 text-blue-800",
-      selesai: "bg-emerald-100 text-emerald-800",
+      selesai: "bg-green-100 text-green-800",
     };
     const label = { pending: "Menunggu", diproses: "Diproses", selesai: "Selesai" };
     return (
@@ -165,7 +172,7 @@ export default function UserCommentsPage() {
     );
   };
 
-  // Build comment tree (optional, for indentation)
+  // Build comment tree
   const buildCommentTree = (commentsList) => {
     const map = new Map();
     const roots = [];
@@ -184,41 +191,45 @@ export default function UserCommentsPage() {
 
   const renderComment = (comment, level = 0) => {
     const isOwn = comment.user_id === currentUserId;
+    const maxIndent = 3;
+    const indentLevel = Math.min(level, maxIndent);
     return (
-      <div key={comment.id} className={`ml-${Math.min(level * 4, 8)}`} style={{ marginLeft: level * 16 }}>
-        <div className="bg-white rounded-xl p-3 shadow-sm border-l-2 border-red-300 mb-2">
+      <div key={comment.id} className={`mb-4 ${indentLevel > 0 ? 'ml-6 md:ml-10' : ''} animate-fadeInUp`} style={{ animationDelay: `${level * 0.05}s` }}>
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-md hover:border-red-200 group">
           <div className="flex justify-between items-start">
-            <div className="flex items-center gap-2">
-              <FaUserCircle className="text-gray-400 text-3xl" />
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                <FaUserCircle className="text-xl" />
+              </div>
               <div>
                 <span className="font-semibold text-gray-800 text-sm">
-                  {comment.user_name || (comment.user_role === "admin" ? "Petugas Admin" : "Saya (Pelapor)")}
+                  {comment.role === "admin" ? "Petugas SWARA" : comment.user_nama}
                 </span>
-                {comment.user_role === "admin" && (
+                {comment.role === "admin" && (
                   <span className="ml-2 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Admin</span>
                 )}
+                <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
+                  <FaClock size={10} />
+                  <span>{formatDate(comment.created_at)}</span>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-400">
-              <FaClock size={10} />
-              <span>{formatDate(comment.created_at)}</span>
-              {isOwn && (
-                <button
-                  onClick={() => handleDeleteComment(comment.id)}
-                  disabled={deletingId === comment.id}
-                  className="text-red-500 hover:text-red-700 transition ml-2"
-                  title="Hapus komentar"
-                >
-                  {deletingId === comment.id ? <FaSpinner className="animate-spin" /> : <FaTrashAlt size={12} />}
-                </button>
-              )}
-            </div>
+            {isOwn && (
+              <button
+                onClick={() => handleDeleteComment(comment.id)}
+                disabled={deletingId === comment.id}
+                className="text-red-400 hover:text-red-700 transition-all duration-200 hover:scale-110"
+                title="Hapus"
+              >
+                {deletingId === comment.id ? <FaSpinner className="animate-spin" size={12} /> : <FaTrashAlt size={14} />}
+              </button>
+            )}
           </div>
-          <p className="text-gray-700 text-sm mt-2 leading-relaxed">{comment.komentar}</p>
-          <div className="mt-2 flex justify-end">
+          <p className="text-gray-700 text-sm mt-3 leading-relaxed">{comment.komentar}</p>
+          <div className="mt-3 flex justify-end">
             <button
-              onClick={() => setReplyingTo({ id: comment.id, userName: comment.user_name })}
-              className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
+              onClick={() => setReplyingTo({ id: comment.id, userName: comment.user_nama || "Pengguna" })}
+              className="text-xs text-red-600 hover:text-red-800 flex items-center gap-1 transition-all duration-200 hover:gap-2 bg-red-50 px-3 py-1 rounded-full"
             >
               <FaReply size={10} /> Balas
             </button>
@@ -231,12 +242,12 @@ export default function UserCommentsPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-gray-50">
+      <div className="flex min-h-screen bg-gradient-to-br from-red-50 via-white to-rose-50">
         <Sidebar />
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <FaSpinner className="animate-spin text-red-600 text-4xl mx-auto mb-3" />
-            <p className="text-gray-500">Memuat laporan Anda...</p>
+          <div className="text-center animate-fadeIn">
+            <FaSpinner className="animate-spin text-red-700 text-5xl mx-auto mb-4" />
+            <p className="text-gray-500 text-lg font-medium animate-pulse">Memuat laporan Anda...</p>
           </div>
         </div>
       </div>
@@ -244,157 +255,219 @@ export default function UserCommentsPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="flex min-h-screen bg-gradient-to-br from-red-50 via-white to-rose-50">
       <Sidebar />
-
-      <div className="flex-1 p-6 md:p-8 overflow-x-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-[#7a2c2a] flex items-center gap-3">
+      <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-red-800 flex items-center gap-3">
             <FaComments className="text-red-600" />
-            Tanggapan & Catatan Laporan
+            Komentar Laporan
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Lihat dan berikan tanggapan resmi terhadap laporan Anda. Komentar digunakan untuk klarifikasi atau informasi tambahan.
-          </p>
+          <p className="text-gray-500 mt-1 ml-1">Diskusi dan klarifikasi dengan petugas terkait laporan Anda.</p>
         </div>
 
+        {/* Notifikasi */}
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-600 text-red-700 rounded-r-lg text-sm flex justify-between">
+          <div className="mb-4 p-3 bg-red-50 border-l-4 border-red-600 text-red-700 rounded-r-xl text-sm flex justify-between items-center animate-slideInRight shadow-sm">
             <span>{error}</span>
-            <button onClick={() => setError("")} className="text-red-700 hover:text-red-900">
-              <FaTimes />
-            </button>
+            <button onClick={() => setError("")} className="text-red-700 hover:text-red-900 transition-transform hover:scale-110"><FaTimes /></button>
+          </div>
+        )}
+        {successMsg && (
+          <div className="mb-4 p-3 bg-green-50 border-l-4 border-green-500 text-green-700 rounded-r-xl text-sm flex justify-between items-center animate-slideInRight shadow-sm">
+            <span><FaCheckCircle className="inline mr-1" /> {successMsg}</span>
+            <button onClick={() => setSuccessMsg("")} className="text-green-700 hover:text-green-900 transition-transform hover:scale-110"><FaTimes /></button>
           </div>
         )}
 
-        <div className="relative max-w-md mb-6">
-          <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Cari judul laporan..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent transition"
-          />
-        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Daftar Laporan - Sidebar kiri dengan desain kartu */}
+          <div className="lg:col-span-1 space-y-4 animate-fadeInUp" style={{ animationDelay: "0.1s" }}>
+            <div className="relative">
+              <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
+              <input
+                type="text"
+                placeholder="Cari laporan..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-red-200 rounded-xl bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-transparent transition-all duration-200 shadow-sm"
+              />
+            </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Daftar Laporan */}
-          <div className="lg:col-span-1 space-y-3">
-            <h2 className="text-lg font-semibold text-gray-700 mb-2 flex items-center gap-2">
-              <FaInbox /> Daftar Laporan
-            </h2>
-            {filtered.length === 0 ? (
-              <div className="bg-white rounded-xl p-6 text-center text-gray-400 shadow-sm border">
-                Tidak ada laporan ditemukan.
-              </div>
-            ) : (
-              filtered.map((l) => (
-                <div
-                  key={l.id}
-                  onClick={() => {
-                    setSelectedLaporan(l);
-                    fetchComments(l.id);
-                    setReplyingTo(null);
-                    setNewComment("");
-                  }}
-                  className={`bg-white rounded-xl p-4 cursor-pointer transition-all duration-200 shadow-sm hover:shadow-md border-l-4 ${
-                    selectedLaporan?.id === l.id
-                      ? "border-red-600 bg-red-50"
-                      : "border-gray-200 hover:border-red-300"
-                  }`}
-                >
-                  <div className="font-semibold text-gray-800 line-clamp-1">{l.judul}</div>
-                  <div className="flex justify-between items-center mt-2 text-xs">
-                    {statusBadge(l.status)}
-                    <div className="flex items-center gap-1 text-gray-400">
-                      <FaClock size={10} />
-                      <span>{formatDate(l.created_at)}</span>
+            <div className="flex items-center gap-2">
+              <FaInbox className="text-red-600 text-lg" />
+              <h2 className="text-lg font-semibold text-gray-700">Laporan Saya ({filteredLaporan.length})</h2>
+            </div>
+
+            <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+              {filteredLaporan.length === 0 ? (
+                <div className="bg-white rounded-xl p-8 text-center text-gray-400 shadow-sm border border-red-100">
+                  <FaFolderOpen className="mx-auto text-4xl mb-2 opacity-40" />
+                  <p>Tidak ada laporan.</p>
+                </div>
+              ) : (
+                filteredLaporan.map((l, idx) => (
+                  <div
+                    key={l.id}
+                    onClick={() => {
+                      setSelectedLaporan(l);
+                      fetchComments(l.id);
+                      setReplyingTo(null);
+                      setNewComment("");
+                    }}
+                    className={`bg-white rounded-xl p-4 cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-2 ${
+                      selectedLaporan?.id === l.id
+                        ? "border-red-500 bg-red-50/50 shadow-md ring-1 ring-red-200"
+                        : "border-red-100 hover:border-red-300"
+                    } animate-fadeInUp`}
+                    style={{ animationDelay: `${idx * 0.05}s` }}
+                  >
+                    <div className="font-semibold text-gray-800 line-clamp-1">{l.judul}</div>
+                    <div className="text-xs text-gray-500 mt-1 flex items-center gap-1 line-clamp-1">
+                      <FaMapMarkerAlt size={10} /> {l.alamat || "Alamat tidak tersedia"}
+                    </div>
+                    <div className="flex justify-between items-center mt-3">
+                      {statusBadge(l.status)}
+                      <div className="flex items-center gap-1 text-gray-400 text-xs">
+                        <FaClock size={10} />
+                        <span>{formatDate(l.created_at)}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
 
-          {/* Area Tanggapan */}
-          <div className="lg:col-span-2">
+          {/* Area Komentar - desain mirip card form */}
+          <div className="lg:col-span-2 animate-fadeInUp" style={{ animationDelay: "0.2s" }}>
             {selectedLaporan ? (
-              <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-                <div className="bg-gradient-to-r from-[#7a2c2a] to-[#5e1914] text-white p-5">
+              <div className="bg-white rounded-2xl shadow-xl border border-red-100 overflow-hidden transition-all duration-300 hover:shadow-2xl">
+                {/* Header laporan dengan gradasi merah */}
+                <div className="bg-gradient-to-r from-red-800 to-red-700 text-white p-5">
                   <h2 className="text-xl font-bold">{selectedLaporan.judul}</h2>
-                  <p className="text-sm text-red-100 mt-2 line-clamp-2">{selectedLaporan.deskripsi}</p>
-                  <div className="mt-3 flex items-center gap-2">
+                  <p className="text-sm text-red-100 mt-2 leading-relaxed">{selectedLaporan.deskripsi}</p>
+                  
+                  <div className="mt-4 bg-white/10 rounded-xl p-3 border border-white/20">
+                    <p className="text-xs font-semibold text-red-100 uppercase tracking-wide">Lokasi Kejadian</p>
+                    <p className="text-sm text-white mt-1 break-words flex items-center gap-1">
+                      <FaMapMarkerAlt /> {selectedLaporan.alamat || "Alamat tidak tersedia"}
+                    </p>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
                     {statusBadge(selectedLaporan.status)}
                     <span className="text-xs text-red-200 flex items-center gap-1">
-                      <FaClock size={10} /> {formatDate(selectedLaporan.created_at)}
+                      <FaClock size={10} />
+                      {formatDate(selectedLaporan.created_at)}
                     </span>
                   </div>
                 </div>
 
-                {/* Daftar Tanggapan dengan nested replies */}
-                <div className="p-5 max-h-[450px] overflow-y-auto space-y-4 bg-gray-50">
+                {/* Daftar Komentar */}
+                <div className="p-5 max-h-[450px] overflow-y-auto bg-gray-50 space-y-4 custom-scrollbar">
                   {commentTree.length === 0 ? (
-                    <div className="text-center py-10 text-gray-400">
-                      <FaInfoCircle className="mx-auto text-3xl mb-2 opacity-50" />
-                      <p>Belum ada tanggapan. Anda dapat memberikan catatan terkait laporan ini.</p>
+                    <div className="text-center py-12 text-gray-400 animate-fadeIn">
+                      <FaInfoCircle className="mx-auto text-5xl mb-3 opacity-40" />
+                      <p className="text-lg">Belum ada komentar.</p>
+                      <p className="text-sm">Mulai diskusi dengan menulis komentar di bawah.</p>
                     </div>
                   ) : (
                     commentTree.map(comment => renderComment(comment, 0))
                   )}
                 </div>
 
-                {/* Form Tambah Tanggapan dengan indikasi balasan */}
-                <form onSubmit={handleAddComment} className="p-4 border-t border-gray-200 bg-white">
+                {/* Form Kirim Komentar */}
+                <form onSubmit={handleAddComment} className="p-5 border-t border-red-100 bg-white">
                   {replyingTo && (
-                    <div className="mb-3 p-2 bg-red-50 rounded-lg flex justify-between items-center text-sm">
+                    <div className="mb-4 p-3 bg-red-50 rounded-xl flex justify-between items-center text-sm animate-fadeIn border-l-4 border-red-500">
                       <span className="text-red-700">
                         <FaReply className="inline mr-1" /> Membalas <strong>{replyingTo.userName}</strong>
                       </span>
-                      <button type="button" onClick={cancelReply} className="text-gray-500 hover:text-red-600">
+                      <button type="button" onClick={cancelReply} className="text-gray-400 hover:text-red-600 transition-transform hover:scale-110">
                         <FaTimes />
                       </button>
                     </div>
                   )}
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {replyingTo ? "Tulis balasan Anda" : "Berikan tanggapan atau informasi tambahan"}
-                  </label>
                   <div className="flex gap-3">
                     <input
                       type="text"
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
-                      placeholder={
-                        replyingTo
-                          ? `Balas ke ${replyingTo.userName}...`
-                          : "Tulis catatan klarifikasi, data pendukung, atau pertanyaan terkait laporan..."
-                      }
-                      className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent transition"
+                      placeholder={replyingTo ? `Balas ke ${replyingTo.userName}...` : "Tulis tanggapan atau pertanyaan..."}
+                      className="flex-1 px-4 py-3 border border-red-200 rounded-xl text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-200 bg-red-50/30"
                     />
                     <button
                       type="submit"
                       disabled={submitting || !newComment.trim()}
-                      className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-md"
+                      className="bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white px-5 py-3 rounded-xl flex items-center gap-2 disabled:opacity-50 transition-all duration-200 hover:scale-105 active:scale-95 shadow-md"
                     >
-                      {submitting ? <FaSpinner className="animate-spin" /> : <FaPaperPlane />}
-                      <span className="hidden sm:inline">Kirim</span>
+                      {submitting ? <FaSpinner className="animate-spin" /> : <FaPaperPlane size={16} />}
+                      <span className="hidden sm:inline font-medium">Kirim</span>
                     </button>
                   </div>
-                  <p className="text-xs text-gray-400 mt-2">
-                    * Gunakan kolom ini untuk memberikan informasi tambahan atau klarifikasi terhadap laporan.
-                    {replyingTo && " Klik tombol X untuk membatalkan balasan."}
+                  <p className="text-xs text-gray-400 mt-3">
+                    * Komentar Anda akan dilihat oleh petugas untuk membantu proses laporan.
+                    {replyingTo && " Klik 'X' untuk membatalkan balasan."}
                   </p>
                 </form>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl p-10 text-center text-gray-400 shadow-sm border border-gray-100">
-                <FaComments className="mx-auto text-4xl mb-3 opacity-40" />
-                <p>Pilih laporan dari daftar di samping untuk melihat atau memberi tanggapan.</p>
+              <div className="bg-white rounded-2xl p-12 text-center text-gray-400 shadow-lg border border-red-100 animate-fadeIn">
+                <FaComments className="mx-auto text-6xl mb-4 opacity-40" />
+                <p className="text-lg font-medium">Pilih laporan terlebih dahulu</p>
+                <p className="text-sm mt-1">Klik salah satu laporan dari daftar di samping untuk melihat atau memberi tanggapan.</p>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideInRight {
+          from { opacity: 0; transform: translateX(50px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.4s ease forwards;
+        }
+        .animate-fadeInUp {
+          opacity: 0;
+          animation: fadeInUp 0.5s ease forwards;
+        }
+        .animate-slideInRight {
+          animation: slideInRight 0.4s ease forwards;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #e0a0a0;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #c06060;
+        }
+        .line-clamp-1 {
+          display: -webkit-box;
+          -webkit-line-clamp: 1;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+      `}</style>
     </div>
   );
 }

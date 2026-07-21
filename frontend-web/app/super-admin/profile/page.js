@@ -15,6 +15,7 @@ import {
   FaTimes,
   FaCamera,
   FaShieldAlt,
+  FaIdCard,
 } from "react-icons/fa";
 
 const BASE_URL = "http://localhost:5000";
@@ -27,9 +28,9 @@ export default function SuperAdminProfilePage() {
   const [showPassword, setShowPassword] = useState(false);
 
   const [profile, setProfile] = useState({
+    id: "",
     nama: "",
     email: "",
-    no_telepon: "",
     role: "",
     foto: null,
   });
@@ -37,7 +38,6 @@ export default function SuperAdminProfilePage() {
   const [form, setForm] = useState({
     nama: "",
     email: "",
-    no_telepon: "",
   });
 
   const [password, setPassword] = useState({
@@ -53,7 +53,6 @@ export default function SuperAdminProfilePage() {
     router.push("/login");
   };
 
-  // Fetch profil super admin
   useEffect(() => {
     const fetchProfile = async () => {
       const token = localStorage.getItem("token");
@@ -61,7 +60,6 @@ export default function SuperAdminProfilePage() {
         router.push("/login");
         return;
       }
-
       try {
         const res = await fetch(`${BASE_URL}/api/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -72,7 +70,6 @@ export default function SuperAdminProfilePage() {
         setForm({
           nama: data.nama || "",
           email: data.email || "",
-          no_telepon: data.no_telepon || "",
         });
       } catch (err) {
         setMessage({ text: err.message, type: "error" });
@@ -83,7 +80,6 @@ export default function SuperAdminProfilePage() {
     fetchProfile();
   }, [router]);
 
-  // Update profil
   const updateProfile = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
@@ -101,12 +97,12 @@ export default function SuperAdminProfilePage() {
       setProfile((prev) => ({ ...prev, ...form }));
       setEditing(false);
       setMessage({ text: "Profil berhasil diupdate", type: "success" });
+      setTimeout(() => setMessage({ text: "", type: "" }), 3000);
     } catch (err) {
       setMessage({ text: err.message, type: "error" });
     }
   };
 
-  // Ganti password
   const changePassword = async (e) => {
     e.preventDefault();
     if (password.baru !== password.konfirmasi) {
@@ -130,6 +126,7 @@ export default function SuperAdminProfilePage() {
       setPassword({ current: "", baru: "", konfirmasi: "" });
       setShowPassword(false);
       setMessage({ text: "Password berhasil diubah", type: "success" });
+      setTimeout(() => setMessage({ text: "", type: "" }), 3000);
     } catch (err) {
       setMessage({ text: err.message, type: "error" });
     }
@@ -150,186 +147,219 @@ export default function SuperAdminProfilePage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50">
+    <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-red-50">
       <SuperAdminSidebar handleLogout={handleLogout} />
-
       <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-            <div className="bg-red-600 p-2 rounded-xl shadow-md">
-              <FaShieldAlt className="text-white text-2xl" />
-            </div>
-            <span>Profil <span className="text-red-600">Super Admin</span></span>
-          </h1>
-          <p className="text-gray-500 mt-1">Kelola informasi akun dan keamanan Anda</p>
-        </div>
-
-        {/* Notifikasi */}
-        {message.text && (
-          <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 shadow-md ${
-            message.type === "success"
-              ? "bg-green-50 text-green-700 border-l-4 border-green-500"
-              : "bg-red-50 text-red-700 border-l-4 border-red-500"
-          }`}>
-            {message.type === "success" ? <FaCheckCircle className="text-lg" /> : <FaTimes className="text-lg" />}
-            <span>{message.text}</span>
-            <button onClick={() => setMessage({ text: "", type: "" })} className="ml-auto text-sm font-semibold">Tutup</button>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Kartu Profil (kiri) */}
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-red-100">
-            <div className="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4">
-              <h2 className="text-white font-semibold flex items-center gap-2">
-                <FaUser /> Informasi Akun
-              </h2>
-            </div>
-            <div className="p-6 text-center">
-              <div className="w-28 h-28 mx-auto rounded-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center border-4 border-red-500 shadow-lg">
-                {profile.foto ? (
-                  <img src={`${BASE_URL}/uploads/${profile.foto}`} className="w-full h-full rounded-full object-cover" />
-                ) : (
-                  <FaUser className="text-5xl text-red-600" />
-                )}
+        <div className="max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 flex items-center gap-3">
+              <div className="bg-red-600 p-2 rounded-xl shadow-md">
+                <FaShieldAlt className="text-white text-2xl" />
               </div>
-              <h3 className="mt-4 text-xl font-bold text-gray-800">{profile.nama}</h3>
-              <p className="text-gray-500">{profile.email}</p>
-              <div className="mt-2 inline-block px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
-                {profile.role === "super_admin" ? "Super Admin" : profile.role}
-              </div>
-            </div>
+              <span>Profil <span className="text-red-600">Super Admin</span></span>
+            </h1>
+            <p className="text-gray-500 mt-1 ml-1">Kelola informasi akun dan keamanan Anda</p>
           </div>
 
-          {/* Form Update Profil & Password (kanan) */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Edit Profil */}
-            <div className="bg-white rounded-2xl shadow-xl border border-red-100 overflow-hidden">
-              <div className="bg-gradient-to-r from-red-50 to-white px-6 py-4 border-b border-red-100 flex justify-between items-center">
-                <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-                  <FaEdit className="text-red-500" /> Edit Profil
-                </h2>
-                {!editing && (
-                  <button
-                    onClick={() => setEditing(true)}
-                    className="text-red-600 hover:text-red-700 text-sm flex items-center gap-1"
-                  >
-                    <FaEdit /> Edit
-                  </button>
-                )}
-              </div>
-              <form onSubmit={updateProfile} className="p-6 space-y-4">
-                <div className="flex items-center border border-gray-200 rounded-xl p-3 focus-within:border-red-400 focus-within:ring-1 focus-within:ring-red-400 transition">
-                  <FaUser className="text-red-400 mr-3" />
-                  <input
-                    value={form.nama}
-                    onChange={(e) => setForm({ ...form, nama: e.target.value })}
-                    disabled={!editing}
-                    className="w-full outline-none bg-transparent disabled:bg-gray-50"
-                    placeholder="Nama Lengkap"
-                  />
-                </div>
-                <div className="flex items-center border border-gray-200 rounded-xl p-3 focus-within:border-red-400 focus-within:ring-1 focus-within:ring-red-400 transition">
-                  <FaEnvelope className="text-red-400 mr-3" />
-                  <input
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    disabled={!editing}
-                    className="w-full outline-none bg-transparent disabled:bg-gray-50"
-                    placeholder="Email"
-                    type="email"
-                  />
-                </div>
-                <div className="flex items-center border border-gray-200 rounded-xl p-3 focus-within:border-red-400 focus-within:ring-1 focus-within:ring-red-400 transition">
-                  <FaPhone className="text-red-400 mr-3" />
-                  <input
-                    value={form.no_telepon}
-                    onChange={(e) => setForm({ ...form, no_telepon: e.target.value })}
-                    disabled={!editing}
-                    className="w-full outline-none bg-transparent disabled:bg-gray-50"
-                    placeholder="Nomor Telepon"
-                  />
-                </div>
-                {editing && (
-                  <div className="flex gap-3 pt-2">
-                    <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl flex items-center gap-2 shadow transition">
-                      <FaSave /> Simpan Perubahan
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditing(false);
-                        setForm({
-                          nama: profile.nama,
-                          email: profile.email,
-                          no_telepon: profile.no_telepon,
-                        });
-                      }}
-                      className="border border-gray-300 px-5 py-2 rounded-xl hover:bg-gray-50 transition"
-                    >
-                      Batal
+          {/* Notifikasi */}
+          {message.text && (
+            <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 shadow-md ${
+              message.type === "success"
+                ? "bg-green-50 border-l-4 border-green-500 text-green-700"
+                : "bg-red-50 border-l-4 border-red-500 text-red-700"
+            }`}>
+              {message.type === "success" ? <FaCheckCircle className="text-green-500" /> : <FaTimes className="text-red-500" />}
+              <span>{message.text}</span>
+              <button onClick={() => setMessage({ text: "", type: "" })} className="ml-auto text-gray-400 hover:text-gray-600">
+                <FaTimes />
+              </button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Kartu Profil Kiri */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-red-100 sticky top-6">
+                <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 text-center">
+                  <div className="relative inline-block">
+                    <div className="w-32 h-32 mx-auto rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border-4 border-white shadow-lg">
+                      {profile.foto ? (
+                        <img src={`${BASE_URL}/uploads/${profile.foto}`} className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        <FaUser className="text-5xl text-white" />
+                      )}
+                    </div>
+                    <button className="absolute bottom-0 right-0 bg-white p-2 rounded-full shadow-md hover:bg-red-50 transition">
+                      <FaCamera className="text-red-600 text-sm" />
                     </button>
                   </div>
-                )}
-              </form>
+                  <h2 className="mt-4 text-xl font-bold text-white">{profile.nama}</h2>
+                  <p className="text-red-100 text-sm">{profile.email}</p>
+                  <span className="inline-block mt-2 px-3 py-1 bg-white/20 rounded-full text-xs font-semibold text-white">
+                    {profile.role === "super_admin" ? "Super Admin" : profile.role}
+                  </span>
+                </div>
+                <div className="p-6 space-y-3">
+                  <div className="flex items-center gap-3 text-gray-600">
+                    <FaEnvelope className="text-red-500 w-4" />
+                    <span className="text-sm">{profile.email}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-600">
+                    <FaIdCard className="text-red-500 w-4" />
+                    <span className="text-sm">ID: {profile.id || "-"}</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Ganti Password */}
-            <div className="bg-white rounded-2xl shadow-xl border border-red-100 overflow-hidden">
-              <div className="bg-gradient-to-r from-red-50 to-white px-6 py-4 border-b border-red-100">
-                <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-                  <FaLock className="text-red-500" /> Keamanan Akun
-                </h2>
-              </div>
-              <div className="p-6">
-                {!showPassword ? (
-                  <button
-                    onClick={() => setShowPassword(true)}
-                    className="text-red-600 hover:text-red-700 flex items-center gap-2 text-sm font-medium"
-                  >
-                    <FaLock /> Ganti Password
-                  </button>
-                ) : (
-                  <form onSubmit={changePassword} className="space-y-4">
-                    <input
-                      type="password"
-                      placeholder="Password saat ini"
-                      value={password.current}
-                      onChange={(e) => setPassword({ ...password, current: e.target.value })}
-                      className="w-full border border-gray-200 rounded-xl p-3 focus:border-red-400 focus:ring-1 focus:ring-red-400 outline-none"
-                      required
-                    />
-                    <input
-                      type="password"
-                      placeholder="Password baru"
-                      value={password.baru}
-                      onChange={(e) => setPassword({ ...password, baru: e.target.value })}
-                      className="w-full border border-gray-200 rounded-xl p-3 focus:border-red-400 focus:ring-1 focus:ring-red-400 outline-none"
-                      required
-                    />
-                    <input
-                      type="password"
-                      placeholder="Konfirmasi password baru"
-                      value={password.konfirmasi}
-                      onChange={(e) => setPassword({ ...password, konfirmasi: e.target.value })}
-                      className="w-full border border-gray-200 rounded-xl p-3 focus:border-red-400 focus:ring-1 focus:ring-red-400 outline-none"
-                      required
-                    />
-                    <div className="flex gap-3">
-                      <button type="submit" className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl shadow transition">
-                        Simpan Password
+            {/* Form Kanan */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Edit Profil */}
+              <div className="bg-white rounded-2xl shadow-xl border border-red-100 overflow-hidden">
+                <div className="px-6 py-4 bg-gradient-to-r from-red-50 to-white border-b border-red-100 flex justify-between items-center">
+                  <div>
+                    <h2 className="font-semibold text-gray-800 flex items-center gap-2">
+                      <FaEdit className="text-red-500" /> Informasi Akun
+                    </h2>
+                    <p className="text-sm text-gray-500">Perbarui data diri Anda</p>
+                  </div>
+                  {!editing && (
+                    <button
+                      onClick={() => setEditing(true)}
+                      className="text-red-600 hover:text-red-700 text-sm flex items-center gap-1 bg-red-50 px-3 py-1.5 rounded-lg transition"
+                    >
+                      <FaEdit /> Edit
+                    </button>
+                  )}
+                </div>
+                <form onSubmit={updateProfile} className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+                    <div className="flex items-center border border-gray-200 rounded-xl p-3 focus-within:ring-2 focus-within:ring-red-500 focus-within:border-transparent transition">
+                      <FaUser className="text-gray-400 mr-3" />
+                      <input
+                        type="text"
+                        value={form.nama}
+                        onChange={(e) => setForm({ ...form, nama: e.target.value })}
+                        disabled={!editing}
+                        className="w-full outline-none bg-transparent disabled:bg-gray-50 text-black"
+                        placeholder="Masukkan nama lengkap"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <div className="flex items-center border border-gray-200 rounded-xl p-3 focus-within:ring-2 focus-within:ring-red-500 focus-within:border-transparent transition">
+                      <FaEnvelope className="text-gray-400 mr-3" />
+                      <input
+                        type="email"
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        disabled={!editing}
+                        className="w-full outline-none bg-transparent disabled:bg-gray-50 text-black"
+                        placeholder="Masukkan email"
+                      />
+                    </div>
+                  </div>
+                  {editing && (
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        type="submit"
+                        className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 transition shadow-md hover:shadow-lg"
+                      >
+                        <FaSave /> Simpan Perubahan
                       </button>
                       <button
                         type="button"
-                        onClick={() => setShowPassword(false)}
-                        className="border border-gray-300 px-5 py-2 rounded-xl hover:bg-gray-50 transition"
+                        onClick={() => {
+                          setEditing(false);
+                          setForm({
+                            nama: profile.nama,
+                            email: profile.email,
+                          });
+                        }}
+                        className="border border-gray-300 px-5 py-2.5 rounded-xl hover:bg-gray-50 transition text-gray-700"
                       >
                         Batal
                       </button>
                     </div>
-                  </form>
-                )}
+                  )}
+                </form>
+              </div>
+
+              {/* Ganti Password */}
+              <div className="bg-white rounded-2xl shadow-xl border border-red-100 overflow-hidden">
+                <div className="px-6 py-4 bg-gradient-to-r from-red-50 to-white border-b border-red-100">
+                  <h2 className="font-semibold text-gray-800 flex items-center gap-2">
+                    <FaLock className="text-red-500" /> Keamanan Akun
+                  </h2>
+                  <p className="text-sm text-gray-500">Ubah password untuk menjaga keamanan</p>
+                </div>
+                <div className="p-6">
+                  {!showPassword ? (
+                    <button
+                      onClick={() => setShowPassword(true)}
+                      className="text-red-600 hover:text-red-700 font-medium flex items-center gap-2 transition"
+                    >
+                      <FaLock /> Ganti Password
+                    </button>
+                  ) : (
+                    <form onSubmit={changePassword} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Password Lama</label>
+                        <input
+                          type="password"
+                          placeholder="Masukkan password lama"
+                          value={password.current}
+                          onChange={(e) => setPassword({ ...password, current: e.target.value })}
+                          className="w-full border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-red-500 text-black"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Password Baru</label>
+                        <input
+                          type="password"
+                          placeholder="Masukkan password baru"
+                          value={password.baru}
+                          onChange={(e) => setPassword({ ...password, baru: e.target.value })}
+                          className="w-full border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-red-500 text-black"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password Baru</label>
+                        <input
+                          type="password"
+                          placeholder="Konfirmasi password baru"
+                          value={password.konfirmasi}
+                          onChange={(e) => setPassword({ ...password, konfirmasi: e.target.value })}
+                          className="w-full border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-red-500 text-black"
+                          required
+                        />
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          type="submit"
+                          className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-xl transition shadow-md"
+                        >
+                          Ubah Password
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPassword(false);
+                            setPassword({ current: "", baru: "", konfirmasi: "" });
+                          }}
+                          className="border border-gray-300 px-5 py-2.5 rounded-xl hover:bg-gray-50 transition text-gray-700"
+                        >
+                          Batal
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -6,6 +6,7 @@ const User = {
       "INSERT INTO users (nama, email, password, role) VALUES (?, ?, ?, ?)",
       [nama, email, password, role]
     );
+
     return result;
   },
 
@@ -14,38 +15,49 @@ const User = {
       "SELECT * FROM users WHERE email = ?",
       [email]
     );
+
     return rows[0];
   },
 
   findById: async (id) => {
     const [rows] = await db.execute(
-      "SELECT id, nama, email, role FROM users WHERE id = ?",
+      "SELECT id, nama, email, role, foto FROM users WHERE id = ?",
       [id]
     );
+
     return rows[0];
   },
 
   update: async (id, data) => {
-    const { nama, email, no_telepon } = data;
+    const nama = data.nama ?? null;
+    const email = data.email ?? null;
+    const foto = data.foto ?? null;
 
     const [result] = await db.execute(
       `UPDATE users 
-       SET nama = ?, email = ?, no_telepon = ? 
+       SET 
+         nama = COALESCE(?, nama),
+         email = COALESCE(?, email),
+         foto = COALESCE(?, foto)
        WHERE id = ?`,
-      [nama, email, no_telepon, id]
+      [nama, email, foto, id]
     );
 
-    if (result.affectedRows === 0) return null;
+    if (result.affectedRows === 0) {
+      return null;
+    }
 
     const [rows] = await db.execute(
-      `SELECT id, nama, email, no_telepon, role 
-       FROM users 
+      `SELECT id, nama, email, role, foto
+       FROM users
        WHERE id = ?`,
       [id]
     );
 
     return rows[0];
   },
+
+  
 };
 
 export default User;

@@ -1,74 +1,96 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import User from '../models/user.js';
-import dotenv from 'dotenv';
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import db from "../config/db.js";
+import dotenv from "dotenv";
+
 dotenv.config();
 
 export const register = async (req, res) => {
-  const { nama, email, password, role } = req.body;
-  // Validasi sederhana
-  if (!nama || !email || !password) {
-    return res.status(400).json({ msg: 'Semua field harus diisi' });
-  }
   try {
-    const existing = await User.findByEmail(email);
-    if (existing) return res.status(400).json({ msg: 'Email sudah terdaftar' });
+    const { nama, email, password } = req.body;
 
-    const hashed = await bcrypt.hash(password, 10);
-    await User.create(nama, email, hashed, role || 'user');
-    res.status(201).json({ msg: 'Registrasi berhasil' });
+    if (!nama || !email || !password) {
+      return res.status(400).json({ msg: "Semua field wajib diisi" });
+    }
+
+    const [existing] = await db.query(
+      "SELECT * FROM users WHERE email = ?",
+      [email]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({ msg: "Email sudah digunakan" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await db.query(
+      "INSERT INTO users (nama, email, password, role) VALUES (?, ?, ?, ?)",
+      [nama, email, hashedPassword, "user"]
+    );
+
+    res.status(201).json({ msg: "Register berhasil" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: 'Server error: ' + err.message });
+    console.log(err);
+    res.status(500).json({ msg: "Server error" });
   }
 };
 
 export const login = async (req, res) => {
-  const { email, password } = req.body;
   try {
-    const user = await User.findByEmail(email);
-    if (!user) return res.status(400).json({ msg: 'Email tidak terdaftar' });
+    const { email, password } = req.body;
 
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(400).json({ msg: 'Password salah' });
+    const [rows] = await db.query(
+      "SELECT * FROM users WHERE email = ?",
+      [email]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "User tidak ditemukan" });
+    }
+
+    const user = rows[0];
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: "Password salah" });
+    }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '1d' }
+      { expiresIn: "1d" }
     );
-    res.json({ token, user: { id: user.id, nama: user.nama, email: user.email, role: user.role } });
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        nama: user.nama,
+        email: user.email,
+        role: user.role,
+      },
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ msg: 'Server error' });
+    console.log(err);
+    res.status(500).json({ msg: "Server error" });
   }
 };
 
 export const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const [rows] = await db.query(
+      "SELECT id, nama, email, role FROM users WHERE id = ?",
+      [req.user.id]
+    );
 
-    if (!user) {
+    if (rows.length === 0) {
       return res.status(404).json({ msg: "User tidak ditemukan" });
     }
 
-    // kirim format yang sesuai frontend kamu
-    res.json({
-      id: user.id,
-      nama: user.nama,
-      email: user.email,
-      role: user.role,
-      no_telepon: user.no_telepon || "",
-      foto: user.foto || null,
-    });
-
+    res.json(rows[0]);
   } catch (err) {
     res.status(500).json({ msg: "Server error" });
   }
 };
-
-
-
-
-

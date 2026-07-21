@@ -4,6 +4,7 @@ import {
   addComment,
   deleteComment
 } from "../controllers/commentController.js";
+import Comment from "../models/comment.js";
 
 const router = express.Router();
 
@@ -12,18 +13,19 @@ router.get("/", auth, async (req, res) => {
   try {
     const { laporan_id } = req.query;
 
-    if (!laporan_id) {
-      return res.status(400).json({ msg: "laporan_id wajib" });
-    }
+    console.log("laporan_id =", laporan_id);
 
-    const Comment = (await import("../models/comment.js")).default;
+    const comments =
+      await Comment.findByLaporanId(laporan_id);
 
-    const comments = await Comment.findByLaporanId(laporan_id);
+    console.log(comments);
 
     res.json(comments);
   } catch (err) {
     console.log(err);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({
+      msg: "Server error",
+    });
   }
 });
 

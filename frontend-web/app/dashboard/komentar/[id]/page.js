@@ -107,6 +107,8 @@ export default function CommentPage() {
           {laporan?.deskripsi}
         </p>
 
+        
+
         {/* COMMENT LIST */}
         <div className="mt-6 space-y-3 max-h-[300px] overflow-y-auto border-t pt-4">
           {comments.length === 0 ? (

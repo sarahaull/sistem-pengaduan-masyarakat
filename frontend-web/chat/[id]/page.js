@@ -1,338 +1,278 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
-
 import Sidebar from "@/app/components/sidebar";
-
 import {
   FaPaperPlane,
   FaUserCircle,
   FaCheckCircle,
+  FaClock,
+  FaFolderOpen,
+  FaImage,
+  FaRegCommentDots,
+  FaSpinner,
+  FaInfoCircle,
 } from "react-icons/fa";
 
 export default function UserChatPage() {
   const params = useParams();
-
   const laporanId = params.id;
 
-  const [laporan, setLaporan] =
-    useState(null);
+  const [laporan, setLaporan] = useState(null);
+  const [chat, setChat] = useState([]);
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const chatEndRef = useRef(null);
 
-  const [chat, setChat] =
-    useState([]);
-
-  const [message, setMessage] =
-    useState("");
-
-  const [loading, setLoading] =
-    useState(true);
-
-  // =========================
-  // GET DATA
-  // =========================
+  // Auto scroll
   useEffect(() => {
-    if (laporanId) {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chat]);
+
+  // Fetch data awal dan interval
+  useEffect(() => {
+    if (!laporanId) return;
+    const fetchData = async () => {
+      await Promise.all([getLaporan(), getChat()]);
+    };
+    fetchData();
+    const interval = setInterval(() => {
       getLaporan();
       getChat();
-    }
+    }, 3000);
+    return () => clearInterval(interval);
   }, [laporanId]);
 
-  // =========================
-  // GET LAPORAN
-  // =========================
-  const getLaporan =
-    async () => {
-      try {
-        const token =
-          localStorage.getItem(
-            "token"
-          );
+  const getLaporan = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`http://localhost:5000/api/laporan/${laporanId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setLaporan(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        const res =
-          await fetch(
-            `http://localhost:5000/api/laporan/${laporanId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
+  const getChat = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`http://localhost:5000/api/chat/${laporanId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setChat(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error(error);
+      setChat([]);
+    }
+  };
 
-        const data =
-          await res.json();
-
-        setLaporan(data);
-      } catch (error) {
-        console.log(error);
-      } finally {
-        setLoading(false);
+  const sendMessage = async () => {
+    if (!message.trim()) return;
+    setSending(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("http://localhost:5000/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          laporan_id: parseInt(laporanId),
+          sender: "user",
+          message,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setChat((prev) => [...prev, data]);
+        setMessage("");
+      } else {
+        alert(data.msg || "Gagal mengirim");
       }
-    };
+    } catch (error) {
+      console.error(error);
+      alert("Gagal mengirim pesan");
+    } finally {
+      setSending(false);
+    }
+  };
 
-  // =========================
-  // GET CHAT
-  // =========================
-  const getChat =
-    async () => {
-      try {
-        const token =
-          localStorage.getItem(
-            "token"
-          );
+  const statusConfig = {
+    pending: { label: "Menunggu", color: "bg-amber-100 text-amber-700 border-amber-200" },
+    diproses: { label: "Diproses", color: "bg-blue-100 text-blue-700 border-blue-200" },
+    selesai: { label: "Selesai", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  };
+  const currentStatus = statusConfig[laporan?.status] || statusConfig.pending;
 
-        const res =
-          await fetch(
-            `http://localhost:5000/api/chat/${laporanId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-
-        const data =
-          await res.json();
-
-        if (
-          Array.isArray(data)
-        ) {
-          setChat(data);
-        } else {
-          setChat([]);
-        }
-      } catch (error) {
-        console.log(error);
-
-        setChat([]);
-      }
-    };
-
-  // =========================
-  // SEND MESSAGE
-  // =========================
-  const sendMessage =
-    async () => {
-      if (!message.trim())
-        return;
-
-      try {
-        const token =
-          localStorage.getItem(
-            "token"
-          );
-
-        const res =
-          await fetch(
-            "http://localhost:5000/api/chat",
-            {
-              method: "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json",
-
-                Authorization: `Bearer ${token}`,
-              },
-
-              body: JSON.stringify({
-                laporan_id:
-                  laporanId,
-
-                sender:
-                  "user",
-
-                message,
-              }),
-            }
-          );
-
-        const data =
-          await res.json();
-
-        if (res.ok) {
-          setChat((prev) => [
-            ...prev,
-            data,
-          ]);
-
-          setMessage("");
-        }
-      } catch (error) {
-        console.log(error);
-      }
-    };
-
-  // =========================
-  // LOADING
-  // =========================
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-xl font-bold">
-        Loading...
+      <div className="flex min-h-screen">
+        <Sidebar />
+        <div className="flex-1 flex items-center justify-center">
+          <FaSpinner className="animate-spin text-red-600 text-4xl" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex bg-[#f4f4f4]">
-
-      {/* SIDEBAR */}
+    <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-
-      {/* CONTENT */}
       <div className="flex-1 flex flex-col">
-
-        {/* HEADER */}
-        <div className="bg-white border-b px-8 py-5 flex items-center justify-between shadow-sm">
-
-          <div>
-            <h1 className="text-2xl font-bold text-[#8B0000]">
-              Chat Pengaduan
-            </h1>
-
-            <p className="text-gray-500 text-sm mt-1">
-              Komunikasi dengan admin
-            </p>
-          </div>
-
-          <div
-            className={`px-5 py-2 rounded-full text-sm font-semibold
-            ${
-              laporan?.status ===
-              "selesai"
-                ? "bg-green-100 text-green-700"
-                : "bg-yellow-100 text-yellow-700"
-            }`}
-          >
-            {laporan?.status}
-          </div>
-        </div>
-
-        {/* DETAIL LAPORAN */}
-        <div className="p-6">
-
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
-
-            <div className="flex items-center gap-4 mb-6">
-
-              <div className="w-14 h-14 rounded-full bg-[#8B0000]/10 flex items-center justify-center">
-                <FaUserCircle className="text-4xl text-[#8B0000]" />
-              </div>
-
-              <div>
-                <h2 className="font-bold text-lg text-gray-800">
-                  {laporan?.judul}
-                </h2>
-
-                <p className="text-sm text-gray-500">
-                  {laporan?.kategori}
-                </p>
-              </div>
-            </div>
-
+        {/* Header */}
+        <div className="bg-white border-b px-5 py-3 shadow-sm flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <FaRegCommentDots className="text-red-600 text-xl" />
             <div>
-              <p className="text-sm text-gray-500 mb-2">
-                Deskripsi Laporan
-              </p>
-
-              <div className="bg-gray-50 rounded-2xl p-4 text-gray-700 leading-relaxed">
-                {laporan?.deskripsi}
-              </div>
+              <h1 className="font-bold text-gray-800">Pusat Bantuan</h1>
+              <p className="text-xs text-gray-500">Admin akan merespon pesan Anda</p>
             </div>
-
-            {laporan?.status ===
-              "selesai" && (
-              <div className="mt-5 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-2xl flex items-center gap-2">
-                <FaCheckCircle />
-                Laporan telah selesai diproses admin
-              </div>
-            )}
+          </div>
+          <div className={`px-3 py-1 rounded-full text-xs font-medium border ${currentStatus.color}`}>
+            {currentStatus.label}
           </div>
         </div>
 
-        {/* CHAT AREA */}
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
-
-          <div className="space-y-4">
-
-            {chat.length ===
-            0 ? (
-              <div className="text-center text-gray-400 mt-10">
-                Belum ada chat
+        {/* === KOTAK INFORMASI LAPORAN (CHAT AWALAN) === */}
+        <div className="p-5 pb-0">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-red-50 to-white px-4 py-2 border-b border-red-100">
+              <h2 className="text-sm font-semibold text-red-700 flex items-center gap-2">
+                <FaInfoCircle /> Detail Laporan
+              </h2>
+            </div>
+            <div className="p-4">
+              <div className="flex gap-4">
+                {laporan?.foto ? (
+                  <img
+                    src={`http://localhost:5000/uploads/${laporan.foto}`}
+                    className="w-20 h-20 rounded-lg object-cover border"
+                    onError={(e) => (e.target.src = "https://placehold.co/80x80?text=No+Img")}
+                  />
+                ) : (
+                  <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <FaImage className="text-gray-400 text-3xl" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-800">{laporan?.judul || "Laporan"}</h3>
+                  <p className="text-gray-600 text-sm mt-1 line-clamp-2">{laporan?.deskripsi}</p>
+                  <div className="flex flex-wrap gap-3 mt-2 text-xs text-gray-400">
+                    <span className="flex items-center gap-1">
+                      <FaFolderOpen size={10} /> {laporan?.kategori || "Umum"}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <FaClock size={10} />{" "}
+                      {laporan?.created_at
+                        ? new Date(laporan.created_at).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          })
+                        : "-"}
+                    </span>
+                  </div>
+                </div>
               </div>
-            ) : (
-              chat.map(
-                (
-                  item,
-                  index
-                ) => (
+            </div>
+          </div>
+        </div>
+
+        {/* Area chat dengan pesan awal jika kosong */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {chat.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+              <div className="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mb-3">
+                <FaRegCommentDots className="text-red-400 text-2xl" />
+              </div>
+              <p className="text-gray-500 font-medium">Belum ada pesan</p>
+              <p className="text-gray-400 text-sm">Kirim pesan pertama untuk memulai diskusi</p>
+            </div>
+          ) : (
+            chat.map((item, idx) => (
+              <div
+                key={idx}
+                className={`flex ${item.sender === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div className="flex items-end gap-2 max-w-[75%]">
+                  {item.sender !== "user" && (
+                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                      <FaUserCircle className="text-red-500 text-xl" />
+                    </div>
+                  )}
                   <div
-                    key={index}
-                    className={`flex ${
-                      item.sender ===
-                      "user"
-                        ? "justify-end"
-                        : "justify-start"
+                    className={`px-4 py-2.5 rounded-2xl shadow-sm ${
+                      item.sender === "user"
+                        ? "bg-red-600 text-white rounded-br-none"
+                        : "bg-white text-gray-800 border rounded-bl-none"
                     }`}
                   >
-                    <div
-                      className={`max-w-[75%] px-5 py-4 rounded-3xl shadow-sm
-                      ${
-                        item.sender ===
-                        "user"
-                          ? "bg-[#8B0000] text-white rounded-br-md"
-                          : "bg-white text-gray-700 rounded-bl-md border"
+                    <p className="text-sm">{item.message}</p>
+                    <p
+                      className={`text-[10px] mt-1 text-right ${
+                        item.sender === "user" ? "text-red-200" : "text-gray-400"
                       }`}
                     >
-                      <p className="text-sm leading-relaxed">
-                        {
-                          item.message
-                        }
-                      </p>
-                    </div>
+                      {item.created_at
+                        ? new Date(item.created_at).toLocaleTimeString("id-ID", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : ""}
+                    </p>
                   </div>
-                )
-              )
-            )}
-
-          </div>
+                  {item.sender === "user" && (
+                    <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center">
+                      <FaUserCircle className="text-white text-xl" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+          <div ref={chatEndRef} />
         </div>
 
-        {/* INPUT */}
-        {laporan?.status !==
-          "selesai" && (
-          <div className="bg-white border-t px-6 py-4">
-
-            <div className="flex items-center gap-3">
-
+        {/* Input form */}
+        {laporan?.status !== "selesai" ? (
+          <div className="bg-white border-t p-4">
+            <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="Tulis pesan..."
                 value={message}
-                onChange={(e) =>
-                  setMessage(
-                    e.target.value
-                  )
-                }
-                className="flex-1 border border-gray-200 bg-gray-50 rounded-2xl px-5 py-3 outline-none focus:ring-2 focus:ring-[#8B0000] text-black"
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                placeholder="Tulis pesan Anda..."
+                className="flex-1 border border-gray-200 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
               />
-
               <button
-                onClick={
-                  sendMessage
-                }
-                className="bg-[#8B0000] hover:bg-[#700000] text-white px-6 py-3 rounded-2xl flex items-center gap-2 transition-all duration-300"
+                onClick={sendMessage}
+                disabled={sending || !message.trim()}
+                className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-full flex items-center gap-2 disabled:opacity-50"
               >
-                <FaPaperPlane />
-                Kirim
+                {sending ? <FaSpinner className="animate-spin" /> : <FaPaperPlane />} Kirim
               </button>
-
+            </div>
+            <p className="text-xs text-gray-400 mt-2 text-center">
+              Admin akan membalas pesan Anda sesegera mungkin
+            </p>
+          </div>
+        ) : (
+          <div className="bg-white border-t p-4 text-center">
+            <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 rounded-full px-4 py-2">
+              <FaCheckCircle /> Laporan selesai, chat ditutup
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

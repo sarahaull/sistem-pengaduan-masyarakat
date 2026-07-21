@@ -6,8 +6,6 @@ const router = express.Router();
 
 router.post("/login", login);
 router.post("/register", register);
-
-// ⭐ INI YANG PENTING UNTUK PROFILE
 router.get("/me", auth, getMe);
 
 export default router;

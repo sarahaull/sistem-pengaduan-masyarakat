@@ -425,7 +425,7 @@ export default function UsersPage() {
               onChange={(e) =>
                 setSearchTerm(e.target.value)
               }
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#a33c33] focus:outline-none w-64"
+              className="pl-10 pr-4 py-2 border text-black border-gray-300 rounded-xl focus:ring-2 focus:ring-[#a33c33] focus:outline-none w-64"
             />
           </div>
         </div>
@@ -458,7 +458,7 @@ export default function UsersPage() {
                   filteredUsers.map((user, idx) => (
                     <tr
                       key={user.id}
-                      className="border-b hover:bg-gray-50 transition"
+                      className=" hover:bg-gray-50 transition text-black"
                     >
                       <td className="p-4 font-mono text-sm">
                         {idx + 1}
@@ -541,7 +541,7 @@ export default function UsersPage() {
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-black"
                 />
 
                 <input
@@ -551,7 +551,7 @@ export default function UsersPage() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-black"
                 />
 
                 <input
@@ -565,14 +565,14 @@ export default function UsersPage() {
                   value={formData.password}
                   onChange={handleChange}
                   required={!editingUser}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-black"
                 />
 
                 <select
                   name="role"
                   value={formData.role}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-black"
                 >
                   <option value="user">User</option>
                   <option value="admin">Admin</option>
@@ -585,7 +585,7 @@ export default function UsersPage() {
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="px-5 py-2 border border-gray-300 rounded-xl"
+                    className="px-5 py-2 border border-gray-300 rounded-xl text-black"
                   >
                     Batal
                   </button>

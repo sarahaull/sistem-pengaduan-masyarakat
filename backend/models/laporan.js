@@ -5,26 +5,42 @@ const Laporan = {
   // CREATE LAPORAN
   // =========================
   create: async (
-    user_id,
-    judul,
-    deskripsi,
-    kategori_id,
-    foto
-  ) => {
+  user_id,
+  judul,
+  deskripsi,
+  kategori_id,
+  foto,
+  alamat,
+  latitude,
+  longitude
+) => {
     const [result] = await db.query(
       `
       INSERT INTO laporan
-      (user_id, judul, deskripsi, kategori_id, foto, status)
-      VALUES (?, ?, ?, ?, ?, ?)
+(
+ user_id,
+ judul,
+ deskripsi,
+ kategori_id,
+ foto,
+ alamat,
+ latitude,
+ longitude,
+ status
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
-      [
-        user_id,
-        judul,
-        deskripsi,
-        kategori_id,
-        foto,
-        "pending",
-      ]
+     [
+ user_id,
+ judul,
+ deskripsi,
+ kategori_id,
+ foto,
+ alamat,
+ latitude,
+ longitude,
+ "pending"
+]
     );
 
     return result;
@@ -42,6 +58,9 @@ const Laporan = {
         laporan.foto,
         laporan.status,
         laporan.created_at,
+        laporan.alamat,
+laporan.latitude,
+laporan.longitude,
 
         users.nama AS nama_user,
         users.email,
@@ -83,36 +102,35 @@ const Laporan = {
   // GET DETAIL LAPORAN
   // =========================
   findById: async (id) => {
-    const [rows] = await db.query(
-      `
-      SELECT
-        laporan.id,
-        laporan.judul,
-        laporan.deskripsi,
-        laporan.foto,
-        laporan.status,
-        laporan.created_at,
+  const [rows] = await db.query(
+    `
+    SELECT
+      laporan.id,
+      laporan.user_id,   -- 🔥 INI WAJIB TAMBAH
+      laporan.judul,
+      laporan.deskripsi,
+      laporan.foto,
+      laporan.status,
+      laporan.created_at,
+      laporan.alamat,
+      laporan.latitude,
+      laporan.longitude,
 
-        users.nama AS nama_user,
-        users.email,
+      users.nama AS nama_user,
+      users.email,
 
-        categories.nama AS kategori
+      categories.nama AS kategori
 
-      FROM laporan
+    FROM laporan
+    LEFT JOIN users ON laporan.user_id = users.id
+    LEFT JOIN categories ON laporan.kategori_id = categories.id
+    WHERE laporan.id = ?
+    `,
+    [id]
+  );
 
-      LEFT JOIN users
-      ON laporan.user_id = users.id
-
-      LEFT JOIN categories
-      ON laporan.kategori_id = categories.id
-
-      WHERE laporan.id = ?
-      `,
-      [id]
-    );
-
-    return rows[0];
-  },
+  return rows[0];
+}
 };
 
 export default Laporan;

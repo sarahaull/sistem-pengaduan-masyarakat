@@ -211,7 +211,7 @@ export default function KelolaUserPage() {
   if (loading) {
     return (
       <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <AdminSidebar />
+        
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <FaSpinner className="animate-spin text-red-600 text-5xl mx-auto mb-4" />
@@ -224,7 +224,7 @@ export default function KelolaUserPage() {
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
-      <AdminSidebar />
+      
 
       {/* TOAST NOTIFICATION */}
       {toast && (
@@ -274,7 +274,7 @@ export default function KelolaUserPage() {
               placeholder="Cari berdasarkan nama atau email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 bg-white shadow-sm focus:ring-2 focus:ring-red-300 focus:border-red-400 transition-all outline-none"
+              className="w-full pl-11 pr-4 text-black py-3 rounded-xl border border-gray-200 bg-white shadow-sm focus:ring-2 focus:ring-red-300 focus:border-red-400 transition-all outline-none"
             />
           </div>
 

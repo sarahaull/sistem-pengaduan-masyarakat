@@ -9,15 +9,18 @@ const Comment = {
     return result;
   },
   findByLaporanId: async (laporanId) => {
-    const [rows] = await db.execute(`
-      SELECT c.*, u.nama as user_nama, u.role
-      FROM comments c
-      JOIN users u ON c.user_id = u.id
-      WHERE c.laporan_id = ?
-      ORDER BY c.created_at ASC
-    `, [laporanId]);
-    return rows;
-  },
+  const [rows] = await db.execute(`
+    SELECT c.*, u.nama as user_nama, u.role
+    FROM comments c
+    JOIN users u ON c.user_id = u.id
+    WHERE c.laporan_id = ?
+    ORDER BY c.created_at ASC
+  `, [laporanId]);
+
+  console.log("ROWS =", rows);
+
+  return rows;
+},
   delete: async (id, userId, role) => {
     let query = 'DELETE FROM comments WHERE id = ?';
     let params = [id];

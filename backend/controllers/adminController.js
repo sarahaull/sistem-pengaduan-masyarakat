@@ -1,6 +1,7 @@
 import db from "../config/db.js";
 import bcrypt from "bcryptjs";
 import User from "../models/User.js"; 
+import { createNotification } from "../controllers/notificationController.js";
 
 // =========================
 // DASHBOARD ADMIN
@@ -331,39 +332,34 @@ export const changeAdminPassword = async (
 // =========================
 export const getAdminLaporan = async (req, res) => {
   try {
-    const [laporan] = await db.query(`
+    const [rows] = await db.query(`
       SELECT 
-        laporan.id,
-        laporan.judul,
-        laporan.deskripsi,
-        laporan.foto,
-        laporan.status,
-        laporan.created_at,
-
-        users.nama AS nama_user,
-        users.email AS email,
-
-        categories.nama AS kategori
-
-      FROM laporan
-
-      LEFT JOIN users
-      ON laporan.user_id = users.id
-
-      LEFT JOIN categories
-      ON laporan.kategori_id = categories.id
-
-      ORDER BY laporan.created_at DESC
+        l.id,
+        l.judul,
+        l.deskripsi,
+        l.foto,
+        l.status,
+        l.created_at,
+        u.nama AS nama_user,
+        u.email,
+        c.nama AS kategori
+      FROM laporan l
+      LEFT JOIN users u ON l.user_id = u.id
+      LEFT JOIN categories c ON l.kategori_id = c.id
+      ORDER BY l.created_at DESC
     `);
 
-    res.json(laporan);
+    // 🔥 pastikan id number
+    const clean = rows.map(r => ({
+      ...r,
+      id: Number(r.id)
+    }));
 
-  } catch (error) {
-    console.log(error);
+    return res.status(200).json(clean);
 
-    res.status(500).json({
-      msg: "Server error",
-    });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ msg: "Server error" });
   }
 };
 
@@ -394,6 +390,7 @@ export const getAllUsers = async (req, res) => {
 };
 
 export const deleteUser = async (req, res) => {
+  
   try {
     const { id } = req.params;
 
@@ -425,13 +422,21 @@ export const updateUserRole = async (req, res) => {
 
 export const deleteLaporanAdmin = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = parseInt(req.params.id);
 
-    // cek laporan ada atau tidak
+    if (!id) {
+      return res.status(400).json({ msg: "ID tidak valid" });
+    }
+
+    // DEBUG LOG (INI PENTING)
+    console.log("DELETE LAPORAN ID:", id);
+
     const [rows] = await db.query(
       "SELECT * FROM laporan WHERE id = ?",
       [id]
     );
+
+    console.log("HASIL QUERY:", rows);
 
     if (rows.length === 0) {
       return res.status(404).json({
@@ -439,27 +444,54 @@ export const deleteLaporanAdmin = async (req, res) => {
       });
     }
 
-    // hapus komentar dulu kalau ada foreign key
+    await db.query("DELETE FROM comments WHERE laporan_id = ?", [id]);
+    await db.query("DELETE FROM chat WHERE laporan_id = ?", [id]);
+    await db.query("DELETE FROM laporan WHERE id = ?", [id]);
+
+    
+
+    return res.json({
+      msg: "Berhasil dihapus",
+      id,
+    });
+
+  } catch (err) {
+    console.log("DELETE ERROR:", err);
+    return res.status(500).json({ msg: "Server error" });
+  }
+};
+
+export const updateStatusLaporan = async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    // 1. update status laporan
     await db.query(
-      "DELETE FROM comments WHERE laporan_id = ?",
+      "UPDATE laporan SET status = ? WHERE id = ?",
+      [status, id]
+    );
+
+    // 2. ambil user_id dari laporan
+    const [laporan] = await db.query(
+      "SELECT user_id FROM laporan WHERE id = ?",
       [id]
     );
 
-    // hapus laporan
+    const userId = laporan[0].user_id;
+
+    // 3. BUAT NOTIFIKASI
     await db.query(
-      "DELETE FROM laporan WHERE id = ?",
-      [id]
+      "INSERT INTO notifications (user_id, message, is_read, created_at) VALUES (?, ?, 0, NOW())",
+      [
+        userId,
+        `Laporan kamu telah ${status === "diproses" ? "di ACC" : "ditolak"} oleh admin`
+      ]
     );
 
-    res.json({
-      msg: "Laporan berhasil dihapus admin",
-    });
-
-  } catch (error) {
-    console.log(error);
-
-    res.status(500).json({
-      msg: "Server error",
-    });
+    res.json({ message: "Status berhasil diupdate + notifikasi terkirim" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Error update status" });
   }
 };

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Henny_Penny } from "next/font/google";
 
 import {
   FaUser,
@@ -11,6 +12,12 @@ import {
   FaSignOutAlt,
   FaPlusCircle,
 } from "react-icons/fa";
+
+
+const hennyPenny = Henny_Penny({
+  subsets: ["latin"],
+  weight: "400",
+});
 
 export default function Sidebar({ handleLogout }) {
   const pathname = usePathname();
@@ -51,7 +58,9 @@ export default function Sidebar({ handleLogout }) {
 
         {/* LOGO */}
         <div className="mb-12">
-          <h1 className="text-[48px] font-extrabold tracking-[6px] leading-none">
+          <h1
+            className={`${hennyPenny.className} text-[48px] tracking-[6px] leading-none`}
+          >
             SWARA
           </h1>
 

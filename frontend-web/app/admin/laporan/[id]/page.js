@@ -3,17 +3,22 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminSidebar from "@/app/components/AdminSidebar";
-import { 
-  FaSearch, 
-  FaFilter, 
-  FaCheckCircle, 
-  FaTimesCircle, 
-  FaSpinner, 
+import {
+  FaSearch,
+  FaFilter,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaSpinner,
   FaClock,
   FaCommentDots,
   FaImage,
   FaUser,
-  FaEnvelope
+  FaEnvelope,
+  FaChartLine,
+  FaExpand,
+  FaTimes,
+  FaMapMarkerAlt,
+  FaExternalLinkAlt,
 } from "react-icons/fa";
 
 export default function AdminLaporanPage() {
@@ -24,6 +29,7 @@ export default function AdminLaporanPage() {
   const [msg, setMsg] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedImage, setSelectedImage] = useState(null);
 
   const fetchLaporan = async () => {
     try {
@@ -51,6 +57,7 @@ export default function AdminLaporanPage() {
       if (!res.ok) throw new Error(data.msg || "Gagal mengambil data");
       const result = Array.isArray(data) ? data : data?.data ? data.data : [];
       setLaporan(result);
+      console.log(laporan);
     } catch (err) {
       console.log(err);
       setMsg(err.message || "Gagal mengambil data laporan");
@@ -65,32 +72,27 @@ export default function AdminLaporanPage() {
   }, []);
 
   const updateStatus = async (id, status) => {
-  try {
-    const token = localStorage.getItem("token");
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`http://localhost:5000/api/admin/laporan/${id}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status }),
+      });
 
-    console.log("update id:", id, "status:", status);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.msg || "Gagal update status");
 
-    const res = await fetch(`http://localhost:5000/api/admin/laporan/${id}/status`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ status }),
-    });
-
-    const data = await res.json();
-    console.log("response update:", data);
-
-    if (!res.ok) throw new Error(data.msg || "Gagal update status");
-
-    setMsg(`Status berhasil diubah ke ${status}`);
-    fetchLaporan();
-  } catch (err) {
-    console.log("ERROR UPDATE:", err);
-    setMsg(err.message || "Gagal update status");
-  }
-};
+      setMsg(`Status berhasil diubah ke ${status === "diproses" ? "Diproses" : status === "selesai" ? "Selesai" : "Ditolak"}`);
+      fetchLaporan();
+    } catch (err) {
+      console.log("ERROR UPDATE:", err);
+      setMsg(err.message || "Gagal update status");
+    }
+  };
 
   const handleTanggapi = (id) => {
     if (!id) return;
@@ -99,7 +101,8 @@ export default function AdminLaporanPage() {
 
   const filteredLaporan = laporan.filter((item) => {
     const matchStatus = statusFilter === "all" || item.status === statusFilter;
-    const matchSearch = searchTerm === "" || 
+    const matchSearch =
+      searchTerm === "" ||
       item.judul?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.deskripsi?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.nama_user?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -107,17 +110,17 @@ export default function AdminLaporanPage() {
   });
 
   const total = laporan.length;
-  const pendingCount = laporan.filter(i => i.status === "pending").length;
-  const diprosesCount = laporan.filter(i => i.status === "diproses").length;
-  const selesaiCount = laporan.filter(i => i.status === "selesai").length;
-  const ditolakCount = laporan.filter(i => i.status === "ditolak").length;
+  const pendingCount = laporan.filter((i) => i.status === "pending").length;
+  const diprosesCount = laporan.filter((i) => i.status === "diproses").length;
+  const selesaiCount = laporan.filter((i) => i.status === "selesai").length;
+  const ditolakCount = laporan.filter((i) => i.status === "ditolak").length;
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-white">
         <div className="text-center">
-          <div className="w-10 h-10 border-2 border-red-800 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-3 text-gray-500 text-sm">Memuat laporan...</p>
+          <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-red-700 font-medium">Memuat laporan...</p>
         </div>
       </div>
     );
@@ -125,45 +128,49 @@ export default function AdminLaporanPage() {
 
   return (
     <div className="min-h-screen flex bg-gray-50">
-      <AdminSidebar />
       <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-800">Kelola Laporan</h1>
-          <p className="text-gray-400 text-sm mt-1">Tinjau dan tanggapi laporan masyarakat</p>
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-8 bg-gradient-to-b from-red-500 to-red-700 rounded-full"></div>
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">Kelola Laporan</h1>
+              <p className="text-gray-500 text-sm mt-1">Tinjau dan tanggapi laporan masyarakat</p>
+            </div>
+          </div>
         </div>
 
-        {/* Notifikasi sukses/error */}
+        {/* Notifikasi */}
         {msg && (
-          <div className="mb-6 bg-red-50 border-l-4 border-red-700 text-red-800 px-4 py-2 rounded-md text-sm shadow-sm flex items-center gap-2">
-            <FaCheckCircle size={14} className="text-red-700" />
+          <div className="mb-6 bg-red-50 border-l-4 border-red-600 text-red-800 px-4 py-3 rounded-md text-sm shadow-sm flex items-center gap-2">
+            <FaCheckCircle className="text-red-600" size={14} />
             <span>{msg}</span>
           </div>
         )}
 
-        {/* Statistik - Minimalis dengan garis bawah merah */}
+        {/* Statistik Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-          <StatCard label="Total" value={total} icon={<FaClock />} color="red" />
+          <StatCard label="Total" value={total} icon={<FaChartLine />} color="red" />
           <StatCard label="Pending" value={pendingCount} icon={<FaClock />} color="amber" />
           <StatCard label="Diproses" value={diprosesCount} icon={<FaSpinner />} color="blue" />
           <StatCard label="Selesai" value={selesaiCount} icon={<FaCheckCircle />} color="green" />
           <StatCard label="Ditolak" value={ditolakCount} icon={<FaTimesCircle />} color="red" />
         </div>
 
-        {/* Filter dan Pencarian */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-8 flex flex-col md:flex-row gap-4 justify-between items-center">
-          <div className="flex items-center gap-3 flex-wrap">
-            <FaFilter className="text-gray-400 text-sm" />
-            <span className="text-xs font-medium text-gray-500">FILTER STATUS</span>
-            <div className="flex gap-1.5">
+        {/* Filter & Search */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-8 flex flex-col md:flex-row gap-4 justify-between items-center">
+          <div className="flex items-center gap-2 flex-wrap">
+            <FaFilter className="text-red-500 text-sm" />
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Filter Status</span>
+            <div className="flex gap-2">
               {["all", "pending", "diproses", "selesai", "ditolak"].map((s) => (
                 <button
                   key={s}
                   onClick={() => setStatusFilter(s)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
                     statusFilter === s
-                      ? "bg-red-50 text-red-700 border border-red-200"
-                      : "text-gray-500 hover:bg-gray-50"
+                      ? "bg-red-600 text-white shadow-md shadow-red-200"
+                      : "bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600"
                   }`}
                 >
                   {s === "all" ? "Semua" : s === "pending" ? "Pending" : s === "diproses" ? "Diproses" : s === "selesai" ? "Selesai" : "Ditolak"}
@@ -171,76 +178,128 @@ export default function AdminLaporanPage() {
               ))}
             </div>
           </div>
-          <div className="relative w-full md:w-64">
-            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-sm" />
+          <div className="relative w-full md:w-72">
+            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
             <input
               type="text"
               placeholder="Cari laporan..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-red-300 focus:ring-1 focus:ring-red-200"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-300 transition-all bg-white"
             />
           </div>
         </div>
 
-        {/* Grid Laporan */}
+        {/* Grid Laporan - SEMUA CARD SERAGAM */}
         {filteredLaporan.length === 0 ? (
-          <div className="bg-white rounded-xl p-12 text-center border border-gray-100 shadow-sm">
-            <div className="text-5xl mb-3 opacity-50">📭</div>
-            <p className="text-gray-400 text-sm">Tidak ada laporan yang cocok</p>
+          <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm">
+            <div className="text-6xl mb-4 opacity-40">📭</div>
+            <p className="text-gray-500 font-medium">Tidak ada laporan yang cocok</p>
+            <p className="text-gray-400 text-sm mt-1">Coba ubah filter atau kata kunci</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredLaporan.map((item) => (
-              <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition duration-200">
-                {/* Gambar dengan rasio 16:9 */}
-                <div className="relative h-40 bg-gray-100">
+              <div
+                key={item.id}
+                className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-red-200 flex flex-col h-full"
+              >
+                {/* GAMBAR - TINGGI TETAP 200px, LEBAR PENUH, OBJECT COVER */}
+                <div 
+                  className="relative bg-gray-100 cursor-pointer group/img flex-shrink-0"
+                  style={{ height: "200px" }}
+                  onClick={() => item.foto && setSelectedImage(`http://localhost:5000/uploads/${item.foto}`)}
+                >
                   {item.foto ? (
-                    <img
-                      src={`http://localhost:5000/uploads/${item.foto}`}
-                      alt={item.judul}
-                      className="w-full h-full object-cover"
-                      onError={(e) => { e.target.src = "https://placehold.co/400x200?text=No+Image"; }}
-                    />
+                    <>
+                      <img
+                        src={`http://localhost:5000/uploads/${item.foto}`}
+                        alt={item.judul}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-105"
+                        onError={(e) => {
+                          e.target.src = "https://placehold.co/600x400?text=Gambar+Gagal";
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/30 transition-all duration-300 flex items-center justify-center opacity-0 group-hover/img:opacity-100">
+                        <div className="bg-white/90 rounded-full p-2 shadow-lg">
+                          <FaExpand className="text-red-600" size={16} />
+                        </div>
+                      </div>
+                    </>
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300">
-                      <FaImage size={32} />
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 gap-2">
+                      <FaImage size={48} />
+                      <span className="text-xs text-gray-400">Tidak ada gambar</span>
                     </div>
                   )}
-                  <div className="absolute top-3 right-3">
+                  <div className="absolute top-3 right-3 z-10">
                     <StatusPill status={item.status} />
                   </div>
                 </div>
 
-                {/* Konten */}
-                <div className="p-5">
-                  <h3 className="font-semibold text-gray-800 text-base line-clamp-1">{item.judul || "Tanpa Judul"}</h3>
-                  <p className="text-gray-500 text-xs mt-1 line-clamp-2">{item.deskripsi || "Tidak ada deskripsi"}</p>
-                  
-                  <div className="mt-3 flex items-center gap-3 text-xs text-gray-400">
-                    <div className="flex items-center gap-1">
-                      <FaUser size={10} />
-                      <span>{item.nama_user || "Anonim"}</span>
+                {/* KONTEN CARD - FLEX COLUMN AGAR TOMBOL DI BAWAH */}
+                <div className="p-5 flex flex-col flex-1">
+                  <h3 className="font-bold text-gray-800 text-lg line-clamp-1 group-hover:text-red-700 transition-colors">
+                    {item.judul || "Tanpa Judul"}
+                  </h3>
+                  <p className="text-gray-500 text-sm mt-2 line-clamp-2 leading-relaxed">
+                    {item.deskripsi || "Tidak ada deskripsi"}
+                  </p>
+
+                  {item.alamat && (
+  <div className="mt-3 bg-red-50 border border-red-100 rounded-lg p-3">
+    <div className="flex items-start gap-2">
+      <FaMapMarkerAlt
+        className="text-red-500 mt-0.5 flex-shrink-0"
+        size={12}
+      />
+      <p className="text-xs text-gray-700 flex-1">
+        {item.alamat}
+      </p>
+    </div>
+
+    {(item.latitude && item.longitude) && (
+      <a
+        href={`https://www.google.com/maps?q=${item.latitude},${item.longitude}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 mt-2 text-xs text-red-600 hover:text-red-700 font-medium"
+      >
+        <FaExternalLinkAlt size={10} />
+        Lihat Lokasi
+      </a>
+    )}
+  </div>
+)}
+
+                  <div className="mt-4 flex items-center gap-4 text-xs text-gray-400 border-t border-gray-100 pt-3">
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                      <div className="w-5 h-5 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
+                        <FaUser className="text-red-500" size={10} />
+                      </div>
+                      <span className="truncate font-medium text-gray-600">{item.nama_user || "Anonim"}</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <FaEnvelope size={10} />
-                      <span className="truncate max-w-[120px]">{item.email || "-"}</span>
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                      <div className="w-5 h-5 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
+                        <FaEnvelope className="text-red-500" size={10} />
+                      </div>
+                      <span className="truncate text-gray-600">{item.email || "-"}</span>
                     </div>
                   </div>
 
-                  {/* Aksi */}
-                  <div className="mt-4">
+                  {/* TOMBOL AKSI - SELALU DI BAWAH */}
+                  <div className="mt-5">
                     {(!item.status || item.status === "pending") && (
-                      <div className="flex gap-2">
+                      <div className="flex gap-3">
                         <button
                           onClick={() => updateStatus(item.id, "diproses")}
-                          className="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 py-1.5 rounded-md text-xs font-medium transition flex items-center justify-center gap-1"
+                          className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95"
                         >
-                          <FaCheckCircle size={12} /> Terima
+                          <FaCheckCircle size={12} /> Terima & Proses
                         </button>
                         <button
                           onClick={() => updateStatus(item.id, "ditolak")}
-                          className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 py-1.5 rounded-md text-xs font-medium transition flex items-center justify-center gap-1"
+                          className="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95"
                         >
                           <FaTimesCircle size={12} /> Tolak
                         </button>
@@ -249,15 +308,21 @@ export default function AdminLaporanPage() {
                     {item.status === "diproses" && (
                       <button
                         onClick={() => handleTanggapi(item.id)}
-                        className="w-full bg-red-50 hover:bg-red-100 text-red-700 py-1.5 rounded-md text-xs font-medium transition flex items-center justify-center gap-2"
+                        className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95"
                       >
-                        <FaCommentDots size={12} /> Tanggapi
+                        <FaCommentDots size={14} /> Tanggapi Sekarang
                       </button>
                     )}
                     {(item.status === "selesai" || item.status === "ditolak") && (
-                      <div className="w-full bg-gray-50 text-gray-400 py-1.5 rounded-md text-xs text-center flex items-center justify-center gap-1">
+                      <div
+                        className={`w-full py-2.5 rounded-xl text-xs font-medium text-center flex items-center justify-center gap-2 ${
+                          item.status === "selesai"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : "bg-red-50 text-red-600 border border-red-200"
+                        }`}
+                      >
                         {item.status === "selesai" ? <FaCheckCircle size={12} /> : <FaTimesCircle size={12} />}
-                        {item.status === "selesai" ? "Selesai" : "Ditolak"}
+                        {item.status === "selesai" ? "Laporan Selesai" : "Laporan Ditolak"}
                       </div>
                     )}
                   </div>
@@ -267,17 +332,39 @@ export default function AdminLaporanPage() {
           </div>
         )}
       </main>
+
+      {/* Modal Preview Gambar */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] p-4">
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute -top-12 right-0 text-white bg-red-600 rounded-full p-2 hover:bg-red-700 transition-all"
+            >
+              <FaTimes size={20} />
+            </button>
+            <img
+              src={selectedImage}
+              alt="Preview"
+              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// Komponen Status Pill (kalem)
+// Status Pill
 function StatusPill({ status }) {
   const styles = {
-    pending: "bg-amber-50 text-amber-600 border border-amber-100",
-    diproses: "bg-blue-50 text-blue-600 border border-blue-100",
-    selesai: "bg-emerald-50 text-emerald-600 border border-emerald-100",
-    ditolak: "bg-red-50 text-red-500 border border-red-100",
+    pending: "bg-amber-100 text-amber-700 border border-amber-200 shadow-sm",
+    diproses: "bg-blue-100 text-blue-700 border border-blue-200 shadow-sm",
+    selesai: "bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm",
+    ditolak: "bg-red-100 text-red-700 border border-red-200 shadow-sm",
   };
   const labels = {
     pending: "Pending",
@@ -285,37 +372,32 @@ function StatusPill({ status }) {
     selesai: "Selesai",
     ditolak: "Ditolak",
   };
-  const s = styles[status] || styles.pending;
-  const label = labels[status] || "Pending";
   return (
-    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${s}`}>
-      {label}
+    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-sm ${styles[status] || styles.pending}`}>
+      {labels[status] || "Pending"}
     </span>
   );
 }
 
-// Komponen StatCard minimalis (hanya border-bottom merah)
+// StatCard
 function StatCard({ label, value, icon, color }) {
-  const borderColor = {
-    red: "border-red-200",
-    amber: "border-amber-200",
-    blue: "border-blue-200",
-    green: "border-emerald-200",
+  const colorMap = {
+    red: { bg: "bg-gradient-to-br from-red-50 to-red-100/30", border: "border-red-200", iconBg: "bg-gradient-to-br from-red-500 to-red-600", text: "text-red-700" },
+    amber: { bg: "bg-gradient-to-br from-amber-50 to-amber-100/30", border: "border-amber-200", iconBg: "bg-gradient-to-br from-amber-500 to-amber-600", text: "text-amber-700" },
+    blue: { bg: "bg-gradient-to-br from-blue-50 to-blue-100/30", border: "border-blue-200", iconBg: "bg-gradient-to-br from-blue-500 to-blue-600", text: "text-blue-700" },
+    green: { bg: "bg-gradient-to-br from-emerald-50 to-emerald-100/30", border: "border-emerald-200", iconBg: "bg-gradient-to-br from-emerald-500 to-emerald-600", text: "text-emerald-700" },
   };
-  const iconColor = {
-    red: "text-red-500",
-    amber: "text-amber-500",
-    blue: "text-blue-500",
-    green: "text-emerald-500",
-  };
+  const c = colorMap[color] || colorMap.red;
   return (
-    <div className={`bg-white rounded-lg border ${borderColor[color]} p-4 shadow-sm`}>
+    <div className={`${c.bg} rounded-xl border ${c.border} p-4 shadow-md hover:shadow-lg transition-all duration-300 group`}>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-gray-400 text-xs uppercase tracking-wide">{label}</p>
-          <p className="text-2xl font-semibold text-gray-700 mt-1">{value}</p>
+          <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">{label}</p>
+          <p className="text-2xl font-bold text-gray-800 mt-1 group-hover:scale-105 transition-transform origin-left">{value}</p>
         </div>
-        <div className={`${iconColor[color]} text-lg opacity-70`}>{icon}</div>
+        <div className={`${c.iconBg} p-2.5 rounded-full text-white shadow-md group-hover:scale-110 transition-transform duration-300`}>
+          {icon}
+        </div>
       </div>
     </div>
   );

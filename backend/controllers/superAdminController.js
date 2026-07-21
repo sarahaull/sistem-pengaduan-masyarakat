@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import Laporan from "../models/Laporan.js";
 import db from "../config/db.js";
 
+
 /**
  * =========================
  * SUPER ADMIN DASHBOARD
@@ -153,29 +154,8 @@ export const deleteUser = async (req, res) => {
   }
 };
 
-/**
- * =========================
- * GET ALL LAPORAN (FULL ACCESS)
- * =========================
- */
-export const getAllLaporanSuperAdmin = async (req, res) => {
-  try {
-    const laporan = await Laporan.find()
-      .populate("user", "name email")
-      .sort({ createdAt: -1 });
 
-    res.json({
-      success: true,
-      data: laporan,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Gagal mengambil laporan",
-      error: error.message,
-    });
-  }
-};
+
 
 
 export const getSuperAdminStats = async (req, res) => {
@@ -184,23 +164,45 @@ export const getSuperAdminStats = async (req, res) => {
     const [admin] = await db.query("SELECT COUNT(*) as total FROM users WHERE role='admin'");
     const [superadmin] = await db.query("SELECT COUNT(*) as total FROM users WHERE role='super_admin'");
 
+    const [comments] = await db.query("SELECT COUNT(*) as total FROM comments");
+    const totalKomentar = comments?.[0]?.total || 0;
+
     const [laporan] = await db.query("SELECT COUNT(*) as total FROM laporan");
-    const [pending] = await db.query("SELECT COUNT(*) as total FROM laporan WHERE status='pending'");
-    const [diproses] = await db.query("SELECT COUNT(*) as total FROM laporan WHERE status='diproses'");
-    const [selesai] = await db.query("SELECT COUNT(*) as total FROM laporan WHERE status='selesai'");
+
+    const [pending] = await db.query(`
+      SELECT COUNT(*) as total 
+      FROM laporan 
+      WHERE status IN ('pending','menunggu')
+    `);
+
+    const [diproses] = await db.query(
+      "SELECT COUNT(*) as total FROM laporan WHERE status='diproses'"
+    );
+
+    const [selesai] = await db.query(
+      "SELECT COUNT(*) as total FROM laporan WHERE status='selesai'"
+    );
 
     return res.json({
-      totalUsers: users[0].total,
-      totalAdmins: admin[0].total,
-      totalSuperAdmins: superadmin[0].total,
-      totalLaporan: laporan[0].total,
-      totalPending: pending[0].total,
-      totalDiproses: diproses[0].total,
-      totalSelesai: selesai[0].total,
+      success: true,
+      data: {
+        totalUsers: users[0].total,
+        totalAdmins: admin[0].total,
+        totalSuperAdmins: superadmin[0].total,
+        totalKomentar,
+        totalLaporan: laporan[0].total,
+        totalPending: pending[0].total,
+        totalDiproses: diproses[0].total,
+        totalSelesai: selesai[0].total,
+      },
     });
+
   } catch (err) {
     console.log("STATS ERROR:", err);
-    return res.status(500).json({ message: err.message });
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
 
@@ -228,29 +230,25 @@ export const getRecentLaporan = async (req, res) => {
         laporan.judul,
         laporan.status,
         laporan.created_at,
-        users.nama AS user_name
+        users.nama AS nama_user
       FROM laporan
-      LEFT JOIN users ON laporan.user_id = users.id
+      LEFT JOIN users 
+      ON laporan.user_id = users.id
       ORDER BY laporan.created_at DESC
       LIMIT 5
     `);
 
-    const formatted = rows.map((l) => ({
-      id: l.id,
-      judul: l.judul,
-      status: l.status,
-      user: {
-        name: l.user_name || "-",
-      },
-    }));
-
     return res.json({
       success: true,
-      data: formatted,
+      data: rows,
     });
+
   } catch (err) {
     console.log("LAPORAN ERROR:", err);
-    return res.status(500).json({ message: err.message });
+
+    return res.status(500).json({
+      message: err.message,
+    });
   }
 };
 
@@ -362,20 +360,35 @@ export const updateUser = async (req, res) => {
 };
 
 
-export const getAllLaporan = async (req, res) => {
+export const getAllLaporanSuperAdmin = async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT * FROM laporan ORDER BY created_at DESC
+      SELECT 
+        laporan.id,
+        laporan.judul,
+        laporan.deskripsi,
+        laporan.status,
+        laporan.created_at,
+        users.nama AS nama_user,
+        users.email
+      FROM laporan
+      LEFT JOIN users 
+      ON laporan.user_id = users.id
+      ORDER BY laporan.created_at DESC
     `);
 
-    res.json({
-      laporan: rows,
+    return res.json({
+      success: true,
+      data: rows,
     });
-  } catch (err) {
-    console.log("ERROR getAllLaporan:", err);
-    res.status(500).json({
-      msg: "Gagal mengambil semua laporan",
-      error: err.message,
+
+  } catch (error) {
+    console.log("GET ALL LAPORAN ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Gagal mengambil laporan",
+      error: error.message,
     });
   }
 };

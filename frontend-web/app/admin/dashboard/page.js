@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AdminSidebar from "@/app/components/AdminSidebar";
+import { io } from "socket.io-client";
+import toast, { Toaster } from "react-hot-toast";
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
   Tooltip, Legend, ResponsiveContainer, LineChart, Line,
@@ -33,23 +35,24 @@ export default function AdminDashboard() {
   const [statusData, setStatusData] = useState([]);
   const [kategoriData, setKategoriData] = useState([]);
   const [trenData, setTrenData] = useState([]);
-  const [selectedChart, setSelectedChart] = useState("status"); // status, kategori, tren
+  const [socket, setSocket] = useState(null);
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userData = localStorage.getItem("user");
-    if (!token || !userData) {
-      router.push("/login");
-      return;
+  // Fungsi untuk refresh data dari API
+  const refreshData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      const res = await fetch("http://localhost:5000/api/admin/laporan", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setLaporan(data);
+      processChartData(data);
+    } catch (err) {
+      console.error("Refresh data error:", err);
     }
-    const parsedUser = JSON.parse(userData);
-    if (parsedUser.role !== "admin" && parsedUser.role !== "super_admin") {
-      router.push("/dashboard");
-      return;
-    }
-    setUser(parsedUser);
-    fetchLaporan(token);
-  }, []);
+  };
 
   const fetchLaporan = async (token) => {
     setLoading(true);
@@ -63,30 +66,30 @@ export default function AdminDashboard() {
       processChartData(data);
     } catch (err) {
       console.error(err);
-      alert("Gagal memuat data. Pastikan backend berjalan.");
+      toast.error("Gagal memuat data. Pastikan backend berjalan.");
     } finally {
       setLoading(false);
     }
   };
-
+   
   const handleDelete = async (id) => {
-    if (!confirm("Yakin hapus laporan ini? Tidak bisa dibatalkan.")) return;
-    const token = localStorage.getItem("token");
-    setDeletingId(id);
+    const confirmDelete = window.confirm("Yakin mau hapus laporan?");
+    if (!confirmDelete) return;
+
     try {
+      const token = localStorage.getItem("token");
       const res = await fetch(`http://localhost:5000/api/admin/laporan/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("Gagal hapus");
-      const updated = laporan.filter((item) => item.id !== id);
-      setLaporan(updated);
-      processChartData(updated);
-      alert("Laporan dihapus.");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.msg || "Gagal hapus");
+      setLaporan((prev) => prev.filter((x) => x.id !== id));
+      toast.success("Laporan berhasil dihapus");
+      refreshData(); // Refresh ulang untuk update chart
     } catch (err) {
-      alert(err.message);
-    } finally {
-      setDeletingId(null);
+      console.error("DELETE ERROR:", err);
+      toast.error(err.message);
     }
   };
 
@@ -125,6 +128,55 @@ export default function AdminDashboard() {
     }
   };
 
+  // Inisialisasi Socket.IO untuk real-time
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const userData = localStorage.getItem("user");
+    if (!token || !userData) {
+      router.push("/login");
+      return;
+    }
+    const parsedUser = JSON.parse(userData);
+    if (parsedUser.role !== "admin" && parsedUser.role !== "super_admin") {
+      router.push("/dashboard");
+      return;
+    }
+    setUser(parsedUser);
+    fetchLaporan(token);
+
+    // Koneksi Socket.IO
+    const socketIo = io("http://localhost:5000", {
+      transports: ["websocket"],
+      auth: { token }, // otentikasi via token (optional)
+    });
+    setSocket(socketIo);
+
+    socketIo.on("connect", () => {
+      console.log("Socket connected (admin)");
+    });
+
+    // Dengarkan event laporan baru
+    socketIo.on("new-report", (newReport) => {
+      console.log("Laporan baru diterima:", newReport);
+      toast.success(`Laporan baru: ${newReport.judul || "Laporan"}`);
+      refreshData(); // Refresh seluruh data (bisa juga update state langsung)
+    });
+
+    // Dengarkan event update status laporan (misalnya dari admin lain)
+    socketIo.on("report-status-updated", (updatedReport) => {
+      console.log("Status laporan diupdate:", updatedReport);
+      refreshData();
+    });
+
+    socketIo.on("disconnect", () => {
+      console.log("Socket disconnected");
+    });
+
+    return () => {
+      socketIo.disconnect();
+    };
+  }, []);
+
   const handleLogout = () => {
     localStorage.clear();
     router.push("/login");
@@ -137,14 +189,11 @@ export default function AdminDashboard() {
   const selesai = laporan.filter((i) => i.status === "selesai").length;
   const ditolak = laporan.filter((i) => i.status === "ditolak").length;
 
-  // Persentase perubahan (fiktif, bisa diganti dengan perbandingan bulan lalu)
-  // Untuk demo, kita buat random tapi terlihat hidup
   const getTrend = (current, prev) => {
     if (prev === 0) return "+100%";
     const diff = ((current - prev) / prev) * 100;
     return `${diff > 0 ? "+" : ""}${diff.toFixed(1)}%`;
   };
-  // Asumsi data bulan lalu (dummy)
   const prevTotal = total * 0.85;
   const prevPending = pending * 1.2;
   const prevDiproses = diproses * 0.9;
@@ -154,11 +203,9 @@ export default function AdminDashboard() {
   const laporanMasuk = laporan.filter((i) => i.status === "pending" || i.status === "diproses");
   const riwayatLaporan = laporan.filter((i) => i.status === "selesai" || i.status === "ditolak");
 
-  // Warna untuk pie
   const COLORS = ["#EAB308", "#3B82F6", "#10B981", "#EF4444"];
 
-  // Stat Card Komponen
-  const StatCard = ({ title, value, icon, color, bgGradient, trend, trendUp }) => (
+  const StatCard = ({ title, value, icon, bgGradient, trend, trendUp }) => (
     <div className={`bg-gradient-to-br ${bgGradient} rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1`}>
       <div className="flex justify-between items-start">
         <div>
@@ -175,8 +222,7 @@ export default function AdminDashboard() {
     </div>
   );
 
-  // Tabel yang lebih modern
-  const LaporanTable = ({ data, title, icon, emptyMessage, onDelete, isDeletingId }) => (
+  const LaporanTable = ({ data, title, icon, emptyMessage }) => (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mt-8">
       <div className="px-6 py-5 bg-gradient-to-r from-red-50 to-white border-b border-gray-100 flex items-center gap-3">
         <div className="text-red-500 text-xl">{icon}</div>
@@ -223,12 +269,8 @@ export default function AdminDashboard() {
                       <Link href={`/admin/laporan/${item.id}`} className="text-red-600 hover:text-red-800 transition flex items-center gap-1 text-sm">
                         <FaEye size={14} /> Detail
                       </Link>
-                      <button
-                        onClick={() => onDelete(item.id)}
-                        disabled={isDeletingId === item.id}
-                        className={`flex items-center gap-1 text-sm ${isDeletingId === item.id ? "text-gray-400 cursor-not-allowed" : "text-red-500 hover:text-red-700"}`}
-                      >
-                        <FaTrashAlt size={14} /> {isDeletingId === item.id ? "..." : "Hapus"}
+                      <button onClick={() => handleDelete(Number(item.id))} className="text-red-500 hover:text-red-700">
+                        Hapus
                       </button>
                     </div>
                   </td>
@@ -254,9 +296,9 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen flex bg-gray-50">
-      <AdminSidebar handleLogout={handleLogout} />
       <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
-        {/* Header Modern */}
+        <Toaster position="top-right" />
+
         <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl lg:text-4xl font-extrabold text-gray-800 tracking-tight">
@@ -272,7 +314,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Stat Cards dengan gradien merah, kuning, biru, hijau */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-10">
           <StatCard title="Total Laporan" value={total} icon={<FaClipboardList />} bgGradient="from-red-700 to-red-800" trend={getTrend(total, prevTotal)} trendUp={total > prevTotal} />
           <StatCard title="Pending" value={pending} icon={<FaClock />} bgGradient="from-amber-500 to-amber-600" trend={getTrend(pending, prevPending)} trendUp={pending > prevPending} />
@@ -281,91 +322,88 @@ export default function AdminDashboard() {
           <StatCard title="Ditolak" value={ditolak} icon={<FaTimesCircle />} bgGradient="from-red-500 to-red-600" trend={getTrend(ditolak, prevDitolak)} trendUp={ditolak > prevDitolak} />
         </div>
 
-        {/* Bagian Chart dengan tab switching (lebih modern) */}
         <div className="mb-10">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <FaChartLine className="text-red-600 text-xl" />
-              <h2 className="text-xl font-bold text-gray-800">Analisis & Statistik</h2>
-            </div>
-            <div className="flex gap-2 bg-white p-1 rounded-xl shadow-sm">
-              {["status", "kategori", "tren"].map((key) => (
-                <button
-                  key={key}
-                  onClick={() => setSelectedChart(key)}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${
-                    selectedChart === key ? "bg-red-600 text-white shadow-md" : "text-gray-500 hover:bg-red-50"
-                  }`}
-                >
-                  {key === "status" ? "Status" : key === "kategori" ? "Kategori" : "Tren Bulanan"}
-                </button>
-              ))}
-            </div>
+          <div className="flex items-center gap-2 mb-5">
+            <FaChartLine className="text-red-600 text-xl" />
+            <h2 className="text-xl font-bold text-gray-800">Analisis & Statistik</h2>
           </div>
-          <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-100">
-            {selectedChart === "status" && (
-              <ResponsiveContainer width="100%" height={350}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="bg-white rounded-2xl shadow-lg p-4 border border-gray-100">
+              <h3 className="font-semibold text-center text-gray-700 mb-2">Status Laporan</h3>
+              <ResponsiveContainer width="100%" height={280}>
                 <PieChart>
-                  <Pie data={statusData} cx="50%" cy="50%" labelLine={true} label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`} outerRadius={110} fill="#8884d8" dataKey="value">
-                    {statusData.map((entry, idx) => <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />)}
+                  <Pie
+                    data={statusData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={true}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {statusData.map((entry, idx) => (
+                      <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
+                    ))}
                   </Pie>
                   <Tooltip formatter={(value) => [`${value} laporan`, "Jumlah"]} />
                   <Legend verticalAlign="bottom" height={36} />
                 </PieChart>
               </ResponsiveContainer>
-            )}
-            {selectedChart === "kategori" && (
-              <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={kategoriData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-lg p-4 border border-gray-100">
+              <h3 className="font-semibold text-center text-gray-700 mb-2">Kategori Laporan</h3>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={kategoriData} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                   <YAxis allowDecimals={false} />
                   <Tooltip cursor={{ fill: '#fef2f2' }} />
-                  <Bar dataKey="value" fill="#DC2626" radius={[8,8,0,0]} barSize={50} />
+                  <Bar dataKey="value" fill="#DC2626" radius={[8,8,0,0]} barSize={40} />
                 </BarChart>
               </ResponsiveContainer>
-            )}
-            {selectedChart === "tren" && trenData.length > 0 && (
-              <ResponsiveContainer width="100%" height={350}>
-                <AreaChart data={trenData}>
-                  <defs>
-                    <linearGradient id="colorJumlah" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#DC2626" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#DC2626" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="bulan" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="jumlah" stroke="#DC2626" fillOpacity={1} fill="url(#colorJumlah)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-            {selectedChart === "tren" && trenData.length === 0 && (
-              <div className="h-80 flex items-center justify-center text-gray-400">Data tanggal tidak tersedia untuk tren</div>
-            )}
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-lg p-4 border border-gray-100">
+              <h3 className="font-semibold text-center text-gray-700 mb-2">Tren Bulanan</h3>
+              {trenData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <AreaChart data={trenData}>
+                    <defs>
+                      <linearGradient id="colorJumlah" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#DC2626" stopOpacity={0.8} />
+                        <stop offset="95%" stopColor="#DC2626" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="bulan" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="jumlah" stroke="#DC2626" fillOpacity={1} fill="url(#colorJumlah)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[280px] flex items-center justify-center text-gray-400">
+                  Data tanggal tidak tersedia untuk tren
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Tabel Laporan Masuk */}
         <LaporanTable
           data={laporanMasuk}
           title="Laporan Masuk"
           icon={<FaClock />}
           emptyMessage="✅ Semua laporan sudah diproses. Tidak ada laporan masuk."
-          onDelete={handleDelete}
-          isDeletingId={deletingId}
         />
 
-        {/* Tabel Riwayat */}
         <LaporanTable
           data={riwayatLaporan}
           title="Riwayat Laporan"
           icon={<FaCheckCircle />}
           emptyMessage="📭 Belum ada laporan selesai atau ditolak."
-          onDelete={handleDelete}
-          isDeletingId={deletingId}
         />
       </main>
     </div>

@@ -1,9 +1,6 @@
 import express from "express";
-import multer from "multer";
-import path from "path";
-
 import auth from "../middleware/auth.js";
-
+import role from "../middleware/role.js";
 import {
   getDashboardAdmin,
   getAdminProfile,
@@ -15,45 +12,41 @@ import {
   deleteUser,
   updateUserRole,
   deleteLaporanAdmin,
+  updateStatusLaporan, 
 } from "../controllers/adminController.js";
-
 import {
   getAllCommentsAdmin,
   updateCommentAdmin,
   deleteCommentAdmin,
-} from "../controllers/commentAdminController.js";
+  addReplyComment,
+} from "../controllers/commentadminController.js";
 
 const router = express.Router();
 
-// MULTER
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) =>
-    cb(null, Date.now() + path.extname(file.originalname)),
-});
+router.use(auth);
+router.use(role("admin", 'super_admin')); // atau role(["admin", "super_admin"])
 
-const upload = multer({ storage });
+// Dashboard & Profile
+router.get("/dashboard", getDashboardAdmin);
+router.get("/profile", getAdminProfile);
+router.put("/profile", updateAdminProfile);
+router.post("/upload-foto", uploadAdminFoto);
+router.put("/change-password", changeAdminPassword);
 
-// ROUTES
-router.get("/dashboard", auth, getDashboardAdmin);
-router.get("/profile", auth, getAdminProfile);
-router.put("/profile", auth, updateAdminProfile);
+// Laporan
+router.get("/laporan", getAdminLaporan);
+router.delete("/laporan/:id", deleteLaporanAdmin);
+router.put("/laporan/:id/status", updateStatusLaporan);
 
-router.get("/laporan", auth, getAdminLaporan);
-router.delete("/laporan/:id", auth, deleteLaporanAdmin);
-router.get("/comments", auth, getAllCommentsAdmin);
-router.put("/comments/:id", auth, updateCommentAdmin);
-router.delete("/comments/:id", auth, deleteCommentAdmin);
+// Users
+router.get("/users", getAllUsers);
+router.delete("/users/:id", deleteUser);
+router.put("/users/:id/role", updateUserRole);
 
-router.post("/upload-foto", auth, upload.single("foto"), uploadAdminFoto);
-
-router.put("/change-password", auth, changeAdminPassword);
-
-// USERS ADMIN
-router.get("/users", auth, getAllUsers);
-router.delete("/users/:id", auth, deleteUser);
-router.put("/users/:id", auth, updateUserRole);
-
-
+// Comments ✅ (yang kurang)
+router.get("/comments", getAllCommentsAdmin);
+router.put("/comments/:id", updateCommentAdmin);
+router.delete("/comments/:id", deleteCommentAdmin);
+router.post("/comments", addReplyComment);
 
 export default router;

@@ -133,3 +133,39 @@ export const getAllUsers = async (req, res) => {
     });
   }
 };
+
+
+
+// ================= UPLOAD FOTO PROFILE =================
+export const uploadFotoProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    if (!req.file) {
+      return res.status(400).json({
+        msg: "File foto tidak ditemukan",
+      });
+    }
+
+    // nama file dari multer
+    const foto = req.file.filename;
+
+    // update foto user di database
+    await User.updateFoto(userId, foto);
+
+    // ambil user terbaru
+    const updatedUser = await User.findById(userId);
+
+    return res.status(200).json({
+      msg: "Upload berhasil",
+      foto: updatedUser.foto,
+      user: updatedUser,
+    });
+  } catch (err) {
+    console.log(err);
+
+    return res.status(500).json({
+      msg: err.message,
+    });
+  }
+};
