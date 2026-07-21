@@ -1,6 +1,6 @@
 import { io } from "../app.js";
 import db from "../config/db.js";
-import Laporan from "../models/laporan.js";
+import Laporan from "../models/Laporan.js";
 import Comment from "../models/comment.js";
 import Category from "../models/category.js";
 import { createNotification } from "./notificationController.js";
