@@ -19,7 +19,7 @@ import {
   updateCommentAdmin,
   deleteCommentAdmin,
   addReplyComment,
-} from "../controllers/commentadminController.js";
+} from "../controllers/commentAdminController.js";
 
 const router = express.Router();
 
