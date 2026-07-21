@@ -1,3 +1,4 @@
+console.log("ADMIN ROUTES VERSION: commentAdmin FIXED");
 import express from "express";
 import auth from "../middleware/auth.js";
 import role from "../middleware/role.js";
