@@ -36,7 +36,7 @@ export default function AdminSidebar({ handleLogout }) {
 
   // Koneksi Socket.io dan event listener
   useEffect(() => {
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:5000";
+      const socketUrl = process.env.NEXT_PUBLIC_API_URL;
     const socket = io(socketUrl);
 
     socket.on("laporanBaru", (data) => {

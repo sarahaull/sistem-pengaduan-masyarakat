@@ -17,7 +17,7 @@ import {
 } from "react-icons/fa";
 import toast, { Toaster } from "react-hot-toast";
 
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function SuperAdminKategoriPage() {
   const router = useRouter();

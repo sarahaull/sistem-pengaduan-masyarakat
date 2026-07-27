@@ -44,7 +44,7 @@ export default function UsersPage() {
       const token = localStorage.getItem("token");
 
       const res = await fetch(
-        "http://localhost:5000/api/super-admin/users",
+        `${process.env.NEXT_PUBLIC_API_URL}/api/super-admin/users`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -172,8 +172,8 @@ export default function UsersPage() {
       const token = localStorage.getItem("token");
 
       const url = editingUser
-        ? `http://localhost:5000/api/super-admin/users/${editingUser.id}`
-        : "http://localhost:5000/api/super-admin/users";
+        ? `${process.env.NEXT_PUBLIC_API_URL}/api/super-admin/users/${editingUser.id}`
+        : `${process.env.NEXT_PUBLIC_API_URL}/api/super-admin/users`;
 
       const method = editingUser ? "PUT" : "POST";
 
@@ -236,7 +236,7 @@ export default function UsersPage() {
       const token = localStorage.getItem("token");
 
       const res = await fetch(
-        `http://localhost:5000/api/super-admin/user/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/super-admin/user/${id}`,
         {
           method: "DELETE",
           headers: {

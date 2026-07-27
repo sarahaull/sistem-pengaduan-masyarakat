@@ -35,7 +35,7 @@ export default function LaporanPage() {
 
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/api/admin/laporan", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/laporan`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Gagal mengambil data");

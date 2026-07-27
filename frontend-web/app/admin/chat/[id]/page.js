@@ -45,7 +45,7 @@ export default function AdminChatPage() {
   const getLaporan = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:5000/api/laporan/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/laporan/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await safeJson(res);
@@ -62,7 +62,7 @@ export default function AdminChatPage() {
   const getChat = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:5000/api/chat/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chat/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await safeJson(res);
@@ -124,7 +124,7 @@ export default function AdminChatPage() {
     setSending(true);
     try {
       const token = localStorage.getItem("token");
-      await fetch("http://localhost:5000/api/chat", {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -232,7 +232,7 @@ export default function AdminChatPage() {
     if (!confirmClose) return;
     try {
       const token = localStorage.getItem("token");
-      await fetch(`http://localhost:5000/api/admin/laporan/${id}/status`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/laporan/${id}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -252,7 +252,7 @@ export default function AdminChatPage() {
 
   const getImage = () =>
     laporan?.foto
-      ? `http://localhost:5000/uploads/${laporan.foto}`
+      ? `${process.env.NEXT_PUBLIC_API_URL}/uploads/${laporan.foto}`
       : "https://via.placeholder.com/400x200?text=Tidak+Ada+Foto";
 
   const getGoogleMapsLink = () => {

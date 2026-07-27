@@ -75,7 +75,7 @@ export default function DetailLaporan() {
   const fetchDetail = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:5000/api/laporan/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/laporan/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -90,7 +90,7 @@ export default function DetailLaporan() {
   const fetchChat = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:5000/api/chat/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chat/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -139,7 +139,7 @@ export default function DetailLaporan() {
 
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/api/chat", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ laporan_id: parseInt(id), sender: "user", message: text }),
@@ -236,7 +236,7 @@ export default function DetailLaporan() {
 
   const status = statusConfig[laporan.status];
   const isChatActive = laporan.status === "diproses";
-  const imageUrl = !imageError && laporan?.foto ? `http://localhost:5000/uploads/${laporan.foto}` : null;
+  const imageUrl = !imageError && laporan?.foto ? `${process.env.NEXT_PUBLIC_API_URL}/uploads/${laporan.foto}` : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-red-50 py-6 px-3 md:px-6">

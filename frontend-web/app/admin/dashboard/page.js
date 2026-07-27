@@ -42,7 +42,7 @@ export default function AdminDashboard() {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
-      const res = await fetch("http://localhost:5000/api/admin/laporan", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/laporan`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -57,7 +57,7 @@ export default function AdminDashboard() {
   const fetchLaporan = async (token) => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/admin/laporan", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/laporan`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -78,7 +78,7 @@ export default function AdminDashboard() {
 
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:5000/api/admin/laporan/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/laporan/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -145,7 +145,7 @@ export default function AdminDashboard() {
     fetchLaporan(token);
 
     // Koneksi Socket.IO
-    const socketIo = io("http://localhost:5000", {
+    const socketIo = io(process.env.NEXT_PUBLIC_API_URL, {
       transports: ["websocket"],
       auth: { token }, // otentikasi via token (optional)
     });

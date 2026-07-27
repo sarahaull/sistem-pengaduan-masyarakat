@@ -39,7 +39,7 @@ import {
 
 import * as XLSX from "xlsx";
 
-const API_BASE = "http://localhost:5000/api/super-admin";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_URL}/api/super-admin`;
 
 export default function StatistikPage() {
   const router = useRouter();

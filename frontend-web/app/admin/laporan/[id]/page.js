@@ -42,7 +42,7 @@ export default function AdminLaporanPage() {
         return;
       }
 
-      const res = await fetch("http://localhost:5000/api/admin/laporan", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/laporan`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -74,7 +74,7 @@ export default function AdminLaporanPage() {
   const updateStatus = async (id, status) => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:5000/api/admin/laporan/${id}/status`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/laporan/${id}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -208,12 +208,12 @@ export default function AdminLaporanPage() {
                 <div 
                   className="relative bg-gray-100 cursor-pointer group/img flex-shrink-0"
                   style={{ height: "200px" }}
-                  onClick={() => item.foto && setSelectedImage(`http://localhost:5000/uploads/${item.foto}`)}
+                  onClick={() => item.foto && setSelectedImage(`${process.env.NEXT_PUBLIC_API_URL}/uploads/${item.foto}`)}
                 >
                   {item.foto ? (
                     <>
                       <img
-                        src={`http://localhost:5000/uploads/${item.foto}`}
+                        src={`${process.env.NEXT_PUBLIC_API_URL}/uploads/${item.foto}`}
                         alt={item.judul}
                         className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-105"
                         onError={(e) => {

@@ -48,7 +48,7 @@ export default function UserChatPage() {
   const getLaporan = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:5000/api/laporan/${laporanId}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/laporan/${laporanId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -63,7 +63,7 @@ export default function UserChatPage() {
   const getChat = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:5000/api/chat/${laporanId}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chat/${laporanId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -79,7 +79,7 @@ export default function UserChatPage() {
     setSending(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/api/chat", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -154,7 +154,7 @@ export default function UserChatPage() {
               <div className="flex gap-4">
                 {laporan?.foto ? (
                   <img
-                    src={`http://localhost:5000/uploads/${laporan.foto}`}
+                    src={`${process.env.NEXT_PUBLIC_API_URL}/uploads/${laporan.foto}`}
                     className="w-20 h-20 rounded-lg object-cover border"
                     onError={(e) => (e.target.src = "https://placehold.co/80x80?text=No+Img")}
                   />
@@ -266,7 +266,7 @@ export default function UserChatPage() {
               Admin akan membalas pesan Anda sesegera mungkin
             </p>
           </div>
-        ) : (
+        ) : ( 
           <div className="bg-white border-t p-4 text-center">
             <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 rounded-full px-4 py-2">
               <FaCheckCircle /> Laporan selesai, chat ditutup

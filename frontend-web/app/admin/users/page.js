@@ -65,7 +65,7 @@ export default function KelolaUserPage() {
     try {
       setError("");
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/api/admin/users", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Gagal mengambil data user");
@@ -141,8 +141,8 @@ export default function KelolaUserPage() {
     try {
       const token = localStorage.getItem("token");
       const url = editingUser
-        ? `http://localhost:5000/api/admin/users/${editingUser.id}`
-        : "http://localhost:5000/api/admin/users";
+        ? `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${editingUser.id}`
+        : `${process.env.NEXT_PUBLIC_API_URL}/api/admin/users`;
       const method = editingUser ? "PUT" : "POST";
       const body = { name: formData.name, email: formData.email, role: formData.role };
       if (formData.password) body.password = formData.password;
@@ -177,7 +177,7 @@ export default function KelolaUserPage() {
     setDeletingId(id);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:5000/api/admin/users/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

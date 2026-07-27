@@ -40,7 +40,7 @@ export default function SuperAdminSidebar() {
   // SOCKET
   // =========================
   useEffect(() => {
-    const socket = io("http://localhost:5000");
+    const socket = io(process.env.NEXT_PUBLIC_API_URL);
 
     socket.on("laporanBaru", (data) => {
       // tambah badge

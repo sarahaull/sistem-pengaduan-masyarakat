@@ -19,7 +19,7 @@ import {
   FaMapMarkerAlt,
 } from "react-icons/fa";
 
-const API = "http://localhost:5000/api";
+const API = `${process.env.NEXT_PUBLIC_API_URL}/api`;
 
 export default function UserCommentsPage() {
   const [laporanList, setLaporanList] = useState([]);

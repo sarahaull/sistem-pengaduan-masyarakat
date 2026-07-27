@@ -38,7 +38,7 @@ export default function StatusLaporanPage() {
       try {
         setLoading(true);
         setError("");
-        const res = await fetch("http://localhost:5000/api/laporan", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/laporan`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -258,7 +258,7 @@ export default function StatusLaporanPage() {
             <div className="space-y-5 animate-fadeInUp">
               {filteredLaporan.map((item) => {
                 const statusStyle = getStatusStyle(item.status);
-                const fotoUrl = item.foto ? `http://localhost:5000/uploads/${item.foto}` : null;
+                const fotoUrl = item.foto ? `${process.env.NEXT_PUBLIC_API_URL}/uploads/${item.foto}` : null;
 
                 return (
                   <div

@@ -115,7 +115,7 @@ export default function AddLaporanPage() {
     const fetchCategories = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch("http://localhost:5000/api/categories", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -245,7 +245,7 @@ export default function AddLaporanPage() {
       formData.append("latitude", form.latitude);
       formData.append("longitude", form.longitude);
 
-      const res = await fetch("http://localhost:5000/api/laporan", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/laporan`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,

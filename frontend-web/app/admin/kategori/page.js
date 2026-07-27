@@ -16,7 +16,7 @@ import {
 } from "react-icons/fa";
 import AdminSidebar from "@/app/components/AdminSidebar";
 
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}`;
 
 export default function KategoriPage() {
   const router = useRouter();

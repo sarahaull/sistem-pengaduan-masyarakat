@@ -20,7 +20,7 @@ import {
   FaCalendarAlt,
 } from "react-icons/fa";
 
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}`;
 
 export default function AdminProfilePage() {
   const router = useRouter();
