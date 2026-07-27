@@ -57,9 +57,16 @@ res.status(201).json({
 });
 
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ msg: "Server error" });
-  }
+  console.error("CREATE LAPORAN ERROR");
+  console.error(err);
+
+  res.status(500).json({
+    message: err.message,
+    code: err.code,
+    sqlMessage: err.sqlMessage,
+    stack: err.stack,
+  });
+}
 };
 
 
